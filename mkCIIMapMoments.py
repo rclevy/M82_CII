@@ -1,6 +1,15 @@
 #make moment maps of CII in disk
 #do this both as traditional moments and by fitting Gaussians to each pixel
 
+import argparse
+
+parser=argparse.ArgumentParser(
+    description='''Make moment maps of [CII] in disk of M82. This makes traditional moment maps and maps based on Gaussian fitting. A masking level can be specified, based on the rms of the cube.''',
+    epilog='''Author: R. C. Levy - Last updated: 2022-04-05''')
+parser.add_argument('--mask_level', type=float, help='SNR level to mask maps (default: no masking)')
+
+args=parser.parse_args()
+
 import numpy as np
 from spectral_cube import SpectralCube
 import astropy.units as u
@@ -29,17 +38,19 @@ filepath = '../Data/Disk_Map/M82_CII_map'
 #load the cube
 cube = SpectralCube.read(filepath+'_cube.fits').with_spectral_unit(u.km/u.s)*u.K
 
-#make traditional moment maps with no masking
-make_moments(cube,filepath,'nomask')
-
 #now mask based on the SNR
+if args.mask_level:
+	level = args.mask_level
+else:
+	level = np.nan
 rms = np.sqrt(np.nanmean(cube)**2)*u.K
-level = 1.
-outsuff = 'maskSNR'+str(int(level))
-cube_masked = cube.with_mask(cube > level*rms)
+if np.isnan(level) == True:
+	outsuff = 'nomask'
+	cube_masked = cube
+else:
+	outsuff = 'maskSNR'+str(int(level))
+	cube_masked = cube.with_mask(cube > level*rms)
 m0m,_,_=make_moments(cube_masked,filepath,outsuff)
-
-
 
 
 #now make "moments" by fitting a Gaussian to each spectrum
