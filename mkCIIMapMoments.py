@@ -39,6 +39,9 @@ outsuff = 'maskSNR'+str(int(level))
 cube_masked = cube.with_mask(cube > level*rms)
 m0m,_,_=make_moments(cube_masked,filepath,outsuff)
 
+
+
+
 #now make "moments" by fitting a Gaussian to each spectrum
 def gauss(x,a,b,c):
 	return a*np.exp(-(x-b)**2/(2*c**2))
