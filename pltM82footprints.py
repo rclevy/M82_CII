@@ -1,3 +1,5 @@
+this_script = __file__
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse, Rectangle
@@ -22,7 +24,7 @@ plt.rcParams['mathtext.fontset'] = 'cm'
 plt.rcParams['font.size'] = 16
 
 #import the CO image of M82 from Krieger+2021
-co = fits.open('../../../Proposals/JWST Cycle 1/Ancillary Images/M82 Images/M82.CO.NOEMA+30m.peak.fits')
+co = fits.open('../../data/M82.CO.NOEMA+30m.peak.fits')
 hdr_co = co[0].header
 wcs_co = WCS(hdr_co)
 arcsec2pix = hdr_co['CDELT2']*3600 #arcsec/pix
@@ -39,7 +41,7 @@ norm=ImageNormalize(data_co,stretch=AsinhStretch(cbreak),interval=ManualInterval
 
 
 #open the HI
-hi = fits.open('../../../Proposals/JWST Cycle 1/Ancillary Images/M82 Images/M82_VLA_HI_mom0.fits')
+hi = fits.open('../../data/m82_hi_24as_mom0.fits')
 hdr_hi = hi[0].header
 wcs_hi = WCS(hdr_hi).celestial
 hi = hi[0].data
@@ -52,9 +54,8 @@ center = SkyCoord('9h55m52.7250s','+69d40m45.780s')
 sp_offset_c8 = (29.152,-80.093) #arcsec
 center_sp_c8 = SkyCoord(center.ra+sp_offset_c8[0]*u.arcsec,center.dec+sp_offset_c8[1]*u.arcsec)
 array_rot = 70. #deg
-mk_great_footprint(center_sp_c8,array_rot=array_rot,color='b')
-fp_c8 = Regions.read('SOFIA_upGREAT_LFA_regions_Cen'+center_sp_c8.to_string('hmsdms').replace(' ','')+'_Rot'+str(array_rot)+'.reg')
-
+#mk_great_footprint(center_sp_c8,array_rot=array_rot,color='b')
+fp_c8 = Regions.read('../Data/upGREAT_Footprint_Regions/SOFIA_upGREAT_LFA_regions_Cen'+center_sp_c8.to_string('hmsdms').replace(' ','')+'_Rot'+str(array_rot)+'.reg')
 #get the box for the map of the center from C8
 xo = 869.5
 yo = 1005.5
@@ -73,12 +74,12 @@ chop_throw = Angle(360.,'arcsec')
 chop_angle = np.radians(125.)
 dbs1 = center_sp.directional_offset_by(chop_angle,chop_throw)
 dbs2 = center_sp.directional_offset_by(chop_angle+np.pi,chop_throw)
-mk_great_footprint(center_sp,array_rot=array_rot,color='k')
-mk_great_footprint(dbs1,array_rot=array_rot,color='teal')
-mk_great_footprint(dbs2,array_rot=array_rot,color='teal')
-fp = Regions.read('SOFIA_upGREAT_LFA_regions_Cen'+center_sp.to_string('hmsdms').replace(' ','')+'_Rot'+str(array_rot)+'.reg')
-fp_dbs1 = Regions.read('SOFIA_upGREAT_LFA_regions_Cen'+dbs1.to_string('hmsdms').replace(' ','')+'_Rot'+str(array_rot)+'.reg')
-fp_dbs2 = Regions.read('SOFIA_upGREAT_LFA_regions_Cen'+dbs2.to_string('hmsdms').replace(' ','')+'_Rot'+str(array_rot)+'.reg')
+# mk_great_footprint(center_sp,array_rot=array_rot,color='k')
+# mk_great_footprint(dbs1,array_rot=array_rot,color='teal')
+# mk_great_footprint(dbs2,array_rot=array_rot,color='teal')
+fp = Regions.read('../Data/upGREAT_Footprint_Regions/../../Data/upGREAT_Footprint_Regions/SOFIA_upGREAT_LFA_regions_Cen'+center_sp.to_string('hmsdms').replace(' ','')+'_Rot'+str(array_rot)+'.reg')
+fp_dbs1 = Regions.read('../Data/upGREAT_Footprint_Regions/SOFIA_upGREAT_LFA_regions_Cen'+dbs1.to_string('hmsdms').replace(' ','')+'_Rot'+str(array_rot)+'.reg')
+fp_dbs2 = Regions.read('../Data/upGREAT_Footprint_Regions/SOFIA_upGREAT_LFA_regions_Cen'+dbs2.to_string('hmsdms').replace(' ','')+'_Rot'+str(array_rot)+'.reg')
 
 
 #set up cropping
@@ -133,7 +134,7 @@ ax.coords[0].set_ticklabel(exclude_overlapping=True)
 ax.coords[1].set_ticklabel(exclude_overlapping=True)
 plt.xlabel('R.A. (J2000)')
 plt.ylabel('Decl. (J2000)')
-plt.savefig('M82_CO_upGREAT_'+str(int(crop_diameter/60))+'arcmin.pdf',bbox_inches='tight')
+plt.savefig('../Plots/Composite_Maps/M82_CO_upGREAT_'+str(int(crop_diameter/60))+'arcmin.pdf',bbox_inches='tight',metadata={'Creator':this_script})
 
 
 #make large figure
@@ -182,6 +183,6 @@ ax.coords[0].set_ticklabel(exclude_overlapping=True)
 ax.coords[1].set_ticklabel(exclude_overlapping=True)
 plt.xlabel('R.A. (J2000)')
 plt.ylabel('Decl. (J2000)')
-plt.savefig('M82_CO_upGREAT_'+str(int(crop_diameter/60))+'arcmin.pdf',bbox_inches='tight')
+plt.savefig('../Plots/Composite_Maps/M82_CO_upGREAT_'+str(int(crop_diameter/60))+'arcmin.pdf',bbox_inches='tight',metadata={'Creator':this_script})
 
 

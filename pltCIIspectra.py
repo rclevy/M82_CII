@@ -1,3 +1,5 @@
+this_script = __file__
+
 #load and plot the outflow spectra in the 7-point footprint config
 
 import argparse
@@ -117,5 +119,5 @@ for i in range(n_pointings):
 			else:
 				ax.set_xlabel('Velocity (km s$^{-1}$)')
 				ax.set_ylabel('T$_{\mathrm{mb}}$ (K)')
-		plt.savefig('../Plots/Outflow_Spectra/M82_CII_Outflow'+str(i+1)+'_'+orient+'_'+str(int(np.abs(new_dv)))+'kms.pdf',bbox_inches='tight')
+		plt.savefig('../Plots/Outflow_Spectra/M82_CII_Outflow'+str(i+1)+'_'+orient+'_'+str(int(np.abs(new_dv)))+'kms.pdf',bbox_inches='tight',metadata={'Creator':this_script})
 

@@ -1,3 +1,5 @@
+this_script = __file__
+
 import argparse
 
 parser=argparse.ArgumentParser(
@@ -14,10 +16,9 @@ args=parser.parse_args()
 import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
-import matplotlib.pyplot as plt
 from astropy.visualization import (ManualInterval, ImageNormalize, LogStretch, AsinhStretch, LinearStretch)
+import matplotlib.pyplot as plt
 import sys
-import upGREATUtils
 
 
 plt.rcParams['font.family']='serif'
@@ -69,7 +70,9 @@ data = fits.open('../Data/Disk_Map/'+fname+'.fits')
 hdr = data[0].header
 wcs = WCS(hdr)
 data = data[0].data
-bmaj,bmin,bpa = upGREATUtils.beam_from_header(hdr)
+bmaj = hdr['BMAJ']*3600 #arcsec
+bmaj = hdr['BMIN']*3600 #arcsec
+bpa = hdr['BPA'] #deg
 
 #do additional masking
 if np.isnan(snr_mask_level)==False:
@@ -124,7 +127,7 @@ ax.set_xlabel('R.A. (J2000)')
 ax.set_ylabel('Decl. (J2000)')
 cb = plt.colorbar(im,extend=cb_ext,shrink=0.75)
 cb.set_label(map_type_str)
-plt.savefig('../Plots/Center_Maps/'+fname+'.pdf',bbox_inches='tight')
+plt.savefig('../Plots/Center_Maps/'+fname+'.pdf',bbox_inches='tight',metadata={'Creator:'this_script})
 plt.close()
 
 

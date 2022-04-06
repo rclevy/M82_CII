@@ -1,3 +1,5 @@
+this_script = __file__
+
 #import packages
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,12 +26,12 @@ from regions import Regions,CircleSkyRegion
 
 #open Nico's M82 image
 
-co = fits.open('../../../Proposals/JWST Cycle 1/Ancillary Images/M82 Images/M82.CO.NOEMA+30m.peak.fits')
+co = fits.open('../../data/M82.CO.NOEMA+30m.peak.fits')
 hdr = co[0].header
 wcs = WCS(hdr)
 co = co[0].data
 co[co<0]=0.
-co = 1.222E6*co/((co['RESTFRQ']/1E9)**2*co['BMAJ']*co['BMIN']*3600**2)
+co = 1.222E6*co/((hdr['RESTFRQ']/1E9)**2*hdr['BMAJ']*hdr['BMIN']*3600**2)
 dist = 3.5E3 #kpc
 
 
@@ -38,18 +40,18 @@ vmin= 0.
 vmax = 30.
 cbreak=0.0998 #default ds9 scaling
 #norm=ImageNormalize(co,stretch=LogStretch(),interval=ManualInterval(vmax=vmax,vmin=vmin))
-norm=ImageNormalize(data_co,stretch=AsinhStretch(cbreak),interval=ManualInterval(vmax=vmax,vmin=vmin))
+norm=ImageNormalize(co,stretch=AsinhStretch(cbreak),interval=ManualInterval(vmax=vmax,vmin=vmin))
 cmap = cm.get_cmap('gist_yarg')
 
 #open the continuum image
-cont = fits.open('../../../Proposals/JWST Cycle 1/Ancillary Images/M82 Images/m82_sma_cont.fits')
+cont = fits.open('../../data/m82_sma_cont.fits')
 hdr_cont = cont[0].header
 wcs_cont = WCS(hdr_cont)
 cont = cont[0].data
 levels = np.linspace(-0.00353959,0.0236673,num=4)
 
 #open the HI
-hi = fits.open('../../../Proposals/JWST Cycle 1/Ancillary Images/M82 Images/M82_VLA_HI_mom0.fits')
+hi = fits.open('../../data/m82_hi_24as_mom0.fits')
 hdr_hi = hi[0].header
 wcs_hi = WCS(hdr_hi).celestial
 hi = hi[0].data
@@ -81,8 +83,8 @@ center = SkyCoord('9h55m52.7250s','+69d40m45.780s')
 sp_offset = (29.152,-80.093) #arcsec
 center_sp = SkyCoord(center.ra+sp_offset[0]*u.arcsec,center.dec+sp_offset[1]*u.arcsec)
 array_rot = 70. #deg
-mk_great_footprint(center_sp,array_rot=array_rot,color='b')
-fp = Regions.read('SOFIA_upGREAT_LFA_regions_Cen'+center_sp.to_string('hmsdms').replace(' ','')+'_Rot'+str(array_rot)+'.reg')
+#mk_great_footprint(center_sp,array_rot=array_rot,color='b')
+fp = Regions.read('../Data/upGREAT_Footprint_Regions/SOFIA_upGREAT_LFA_regions_Cen'+center_sp.to_string('hmsdms').replace(' ','')+'_Rot'+str(array_rot)+'.reg')
 
 
 fsz=14
@@ -121,7 +123,7 @@ ax.coords[1].set_minor_frequency(5)
 plt.xlabel('R.A. (J2000)')
 plt.ylabel('Decl. (J2000)',labelpad=-1)
 ax.set_rasterization_zorder(10)
-plt.savefig('M82_CO_HI_SOFIA.pdf',rasterized=True,dpi=300)
+plt.savefig('../Plots/Composite_Maps/M82_CO_HI_SOFIAfootprints.pdf',rasterized=True,dpi=300,bbox_iches='tight',metadata={'Creator':this_script})
 plt.close()
 
 

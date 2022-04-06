@@ -32,14 +32,6 @@ def load_upgreat_data(filepath):
 	
 	return spec, vel[:,0].value, header, w
 
-def beam_from_header(hdr):
-	#grab and parse the beam info from the upGREAT fits header
-	beam = hdr['BEAM'].split(' ')
-	bmaj = float(beam[1].split('=')[1]) #arcsec
-	bmin = float(beam[3].split('=')[1]) #arcsec
-	bpa = float(beam[5].split('=')[1]) #deg
-	return bmaj, bmin, bpa
-
 
 def calc_pix_distance_from_gal_center(gal_center, header, distance):
 	#calculate the distance of the given pixel from a specifed RA/Dec
