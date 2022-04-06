@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import (Ellipse, Rectangle)
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.cm as cm
+import matplotlib.patheffects as pe
 plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.size'] =14
 plt.rcParams['mathtext.rm'] = 'serif'
@@ -80,7 +81,8 @@ hi[950:1040,954:1050]=np.nan
 hmap = sns.color_palette('flare',as_cmap=True)
 outline_color_hi = hmap(150)
 
-xlim,ylim = wcs_hi.all_world2pix([149.25,148.75],[69.6,69.75],0,ra_dec_order=True)
+xlimo,ylimo = wcs_hi.all_world2pix([149.5,148.5],[69.5,69.8],0,ra_dec_order=True)
+xlim,ylim = wcs_hi.all_world2pix([149.1,148.85],[69.64,69.715],0,ra_dec_order=True)
 xlimz,ylimz = wcs_hi.all_world2pix([148.99166666666667,148.93749999999997],[69.675,69.68472222222222],0,ra_dec_order=True)
 
 
@@ -102,7 +104,19 @@ outline_color_cii = cmap_cii(150)
 
 #get positions for beams
 x_text = xlim[0]+0.95*(xlim[1]-xlim[0])
-y_text = ylim[0]+0.05*(ylim[1]-ylim[0])
+y_text = ylim[0]+0.075*(ylim[1]-ylim[0])
+x_text_sb = xlim[0]+0.05*(xlim[1]-xlim[0])
+x_texto = xlimo[0]+0.95*(xlimo[1]-xlimo[0])
+y_texto = ylimo[0]+0.05*(ylimo[1]-ylimo[0])
+x_texto_sb = xlimo[0]+0.05*(xlimo[1]-xlimo[0])
+
+#add scale bar
+sb_kpc = 2. #kpc
+sb_pc = 200. #pc
+sb_kpc_pix = sb_kpc/dist*206265/arcsec2pix
+sb_pc_pix = sb_pc/1E3/dist*206265/arcsec2pix
+sb_kpc_text = str(int(sb_kpc))+' kpc'
+sb_pc_text = str(int(sb_pc))+' pc'
 
 
 center = SkyCoord('9h55m52.7250s','+69d40m45.780s')
@@ -131,8 +145,8 @@ im.cmap.set_under('w')
 im.cmap.set_bad('w')
 ax.contourf(hi,levels=lev,origin='lower',cmap=hmap,alpha=1.0)
 ax.contour(cii,origin='lower',levels=levels_cii,cmap=cmap_cii,transform=ax.get_transform(wcs_cii))
-ax.set_xlim(xlim)
-ax.set_ylim(ylim)
+ax.set_xlim(xlimo)
+ax.set_ylim(ylimo)
 ax.coords[0].set_major_formatter('hh:mm:ss.s')
 ax.coords[0].set_separator(('$^{\mathrm{h}}$','$^{\mathrm{m}}$','$^{\mathrm{s}}$'))
 ax.coords[0].display_minor_ticks(True)
@@ -142,9 +156,20 @@ ax.coords[1].set_minor_frequency(4)
 plt.xlabel('R.A. (J2000)')
 plt.ylabel('Decl. (J2000)',labelpad=-1)
 ax.set_rasterization_zorder(10)
-ax.add_patch(Ellipse((x_text,y_text), bmin_hi/arcsec2pix, bmaj_hi/arcsec2pix, bpa_hi, ec=outline_color_hi, fc='None',lw=3.0)) #plot the beam
-ax.add_patch(Ellipse((x_text,y_text), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='k', fc='None',lw=2.0)) #plot the beam
-ax.add_patch(Ellipse((x_text,y_text), bmin_cii/arcsec2pix, bmaj_cii/arcsec2pix, bpa_cii, ec=outline_color_cii, fc='None',lw=2.0)) #plot the beam
+ax.add_patch(Ellipse((x_texto,y_texto), bmin_hi/arcsec2pix, bmaj_hi/arcsec2pix, bpa_hi, ec=outline_color_hi, fc='None',lw=3.0)) #plot the beam
+ax.add_patch(Ellipse((x_texto,y_texto), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='None', fc='k',lw=2.0)) #plot the beam
+ax.add_patch(Ellipse((x_texto,y_texto), bmin_cii/arcsec2pix, bmaj_cii/arcsec2pix, bpa_cii, ec=outline_color_cii, fc='None',lw=2.0)) #plot the beam
+ax.plot([x_texto_sb,x_texto_sb+sb_kpc_pix],[y_texto,y_texto],'-',color='k',lw=3)
+ax.text(np.mean([x_texto_sb,x_texto_sb+sb_kpc_pix]),y_texto,sb_kpc_text,color='k',ha='center',va='bottom')
+plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_fullHIFOV.pdf',dpi=300,metadata={'Creator':this_script})
+ax.set_xlim(xlim)
+ax.set_ylim(ylim)
+b1=ax.add_patch(Ellipse((x_text,y_text), bmin_hi/arcsec2pix, bmaj_hi/arcsec2pix, bpa_hi, ec=outline_color_hi, fc='None',lw=3.0)) #plot the beam
+b2=ax.add_patch(Ellipse((x_text,y_text), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='None', fc='k',lw=2.0)) #plot the beam
+b3=ax.add_patch(Ellipse((x_text,y_text), bmin_cii/arcsec2pix, bmaj_cii/arcsec2pix, bpa_cii, ec=outline_color_cii, fc='None',lw=2.0)) #plot the beam
+b1.set_path_effects([pe.Stroke(linewidth=4.0, foreground='w'),pe.Normal()])
+s1,=ax.plot([x_text_sb,x_text_sb+sb_pc_pix],[y_text,y_text],'-',color='w',lw=3)
+s2=ax.text(np.mean([x_text_sb,x_text_sb+sb_pc_pix]),y_text,sb_pc_text,color='w',ha='center',va='bottom')
 plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII.pdf',dpi=300,metadata={'Creator':this_script})
 
 
@@ -155,6 +180,19 @@ for i in range(len(fp)):
 	this_fp.visual['color'] = outline_color_cii
 	this_fp.to_pixel(wcs_hi).plot()
 plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_outflowfootprints.pdf',dpi=300,metadata={'Creator':this_script})
+ax.set_xlim(xlimo)
+ax.set_ylim(ylimo)
+ax.add_patch(Ellipse((x_texto,y_texto), bmin_hi/arcsec2pix, bmaj_hi/arcsec2pix, bpa_hi, ec=outline_color_hi, fc='None',lw=3.0)) #plot the beam
+ax.add_patch(Ellipse((x_texto,y_texto), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='None', fc='k',lw=2.0)) #plot the beam
+ax.add_patch(Ellipse((x_texto,y_texto), bmin_cii/arcsec2pix, bmaj_cii/arcsec2pix, bpa_cii, ec=outline_color_cii, fc='None',lw=2.0)) #plot the beam
+ax.plot([x_texto_sb,x_texto_sb+sb_kpc_pix],[y_texto,y_texto],'-',color='k',lw=3)
+ax.text(np.mean([x_texto_sb,x_texto_sb+sb_kpc_pix]),y_texto,sb_kpc_text,color='k',ha='center',va='bottom')
+b1.remove()
+b2.remove()
+b3.remove()
+s1.remove()
+s2.remove()
+plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_outflowfootprints_fullHIFOV.pdf',dpi=300,metadata={'Creator':this_script})
 
 
 #now add the spectra in an inset
@@ -165,7 +203,7 @@ ax_in.tick_params(axis='both',bottom=False,left=False,labelbottom=False,labellef
 for pos in ['bottom','top','left','right']:
 	ax_in.spines[pos].set_color(outline_color_cii)
 	ax_in.spines[pos].set_linewidth(2)
-plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_Spectra.pdf',dpi=300,metadata={'Creator':this_script})
+plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_Spectra_fullHIFOV.pdf',dpi=300,metadata={'Creator':this_script})
 
 
 

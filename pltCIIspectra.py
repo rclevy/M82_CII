@@ -108,7 +108,7 @@ for i in range(n_pointings):
 
 			ax.set_xlim(-100,400)
 			if i==0:
-				ax.set_ylim(-0.05,0.5)
+				ax.set_ylim(-0.05,0.25)
 			else:
 				ax.set_ylim(-0.25,0.5)
 			ax.minorticks_on()
