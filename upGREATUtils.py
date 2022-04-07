@@ -49,7 +49,7 @@ def calc_pix_distance_from_gal_center(gal_center, header, distance):
 
 	sep_arcsec = gal_center.separation(pix_center).to(u.arcsec)
 	sep_pc = (sep_arcsec.value/206265*distance).to(u.pc)
-	return sep_arcsec,sep_pc
+	return sep_arcsec,sep_pc,pix_center
 
 def pixel_order_from_class(plot_order_sky):
 	import numpy as np

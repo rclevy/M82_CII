@@ -19,11 +19,13 @@ from astropy.wcs import WCS
 from astropy.visualization import (ManualInterval, ImageNormalize, LogStretch, AsinhStretch, LinearStretch)
 import matplotlib.pyplot as plt
 import sys
+import seaborn as sns
 
 
 plt.rcParams['font.family']='serif'
 plt.rcParams['mathtext.rm'] = 'serif'
 plt.rcParams['mathtext.fontset'] = 'cm'
+plt.rcParams['font.size'] = 24
 
 map_type = args.map_type
 map_types = ['mom0', 'mom1', 'mom2', 'peak', 'vcen', 'vcen_cgrad', 'fwhm', 'epeak', 'evcen', 'efwhm']
@@ -127,7 +129,7 @@ ax.set_xlabel('R.A. (J2000)')
 ax.set_ylabel('Decl. (J2000)')
 cb = plt.colorbar(im,extend=cb_ext,shrink=0.75)
 cb.set_label(map_type_str)
-plt.savefig('../Plots/Center_Maps/'+fname+'.pdf',bbox_inches='tight',metadata={'Creator:'this_script})
+plt.savefig('../Plots/Center_Maps/'+fname+'.pdf',bbox_inches='tight',metadata={'Creator':this_script})
 plt.close()
 
 
