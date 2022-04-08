@@ -129,6 +129,10 @@ for i in range(len(ix)):
 	efwhm[iy[i],ix[i]] = ep[2]*2.355
 
 
+#get integrated intensity based on Gaussian fits
+iint = peak*fwhm/2.355*np.sqrt(np.pi)
+eiint = np.sqrt((epeak*fwhm/2.355*np.sqrt(np.pi))**2+(peak*efwhm/2.355*np.sqrt(np.pi))**2)
+
 hdr = m0m.header
 hdr['BUNIT']='K'
 save_gaussfits(peak,hdr,filepath_mom,'peak',outsuff)
@@ -138,6 +142,9 @@ save_gaussfits(vel,hdr,filepath_mom,'vcen',outsuff)
 save_gaussfits(evel,hdr,filepath_mom,'evcen',outsuff)
 save_gaussfits(fwhm,hdr,filepath_mom,'fwhm',outsuff)
 save_gaussfits(efwhm,hdr,filepath_mom,'efwhm',outsuff)
+hdr['BUNIT']='K km/s'
+save_gaussfits(iint,hdr,filepath_mom,'intinten',outsuff)
+save_gaussfits(iint,hdr,filepath_mom,'eintinten',outsuff)
 
 #now do some masking of the vcen field
 maxdev = 40. #km/s

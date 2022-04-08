@@ -90,8 +90,8 @@ for i in range(n_pointings):
 		ax = plt.subplot(gs[this_row,start_cols[j]:start_cols[j]+2],)
 		c0=ax.fill_between(cii_vel,cii_spec,color=cii_color,alpha=0.5,step='pre')
 		c1,=ax.step(cii_vel,cii_spec,color=cii_color,lw=1.5,label='[CII]')
-		c2,=ax.step(co_vel_smo,co_spec_smo,color=co_color,lw=1.25,label='CO')#\\%.1e' %(1/co_sf))
-		c3,=ax.step(hi_vel_smo,hi_spec_smo,color=hi_color,lw=1.25,label='HI')#\\%.1e' %(1/hi_sf))
+		c2,=ax.step(co_vel_smo,co_spec_smo,color=co_color,lw=1.5,label='CO')#\\%.1e' %(1/co_sf))
+		c3,=ax.step(hi_vel_smo,hi_spec_smo,color=hi_color,lw=1.5,label='HI')#\\%.1e' %(1/hi_sf))
 		leg = plt.legend([(c0,c1),c2,c3],[c1.get_label(),c2.get_label(),c3.get_label()],
 			fontsize=plt.rcParams['font.size']-2,loc='upper left')
 		ax.text(0.5,0.95,pix_order_labels[j],ha='center',va='top',transform=ax.transAxes)
