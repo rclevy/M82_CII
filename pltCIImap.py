@@ -68,7 +68,7 @@ else:
 
 #open the fits file
 fname = 'M82_CII_map_'+map_type+'_'+masksuff
-data = fits.open('../Data/Disk_Map/'+fname+'.fits')
+data = fits.open('../Data/Disk_Map/Moments/'+fname+'.fits')
 hdr = data[0].header
 wcs = WCS(hdr)
 data = data[0].data

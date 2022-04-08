@@ -18,6 +18,39 @@ from scipy.optimize import curve_fit
 from scipy.signal import medfilt2d
 from scipy.ndimage import convolve
 
+
+def mask_out_undersampled(cube,filepath):
+	#mask out parts of the cube that were undersampled
+	#leaving only the fully sampled map region
+	#do this first based on the original AOR
+	#may be better to do this based on some coverage map or intgration time per pointing
+	from astropy.coordinates import SkyCoord
+	from astropy.wcs import WCS
+	center_AOR = SkyCoord('9h55m52.7250s +69d40m45.780s')
+	map_angle = -20. #deg, but the cube is already rotated by this much
+	fullsamp_x = 185.4 #arcsec
+	fullsamp_y = 65.4 #arcsec
+	arcsec2pix = cube.header['CDELT2']*3600
+	wcs = WCS(cube.header)
+	xcen_pix,ycen_pix = wcs.celestial.all_world2pix(center_AOR.ra.value,center_AOR.dec.value,1,ra_dec_order=True)
+	fullsamp_x_pix = fullsamp_x/arcsec2pix
+	fullsamp_y_pix = fullsamp_y/arcsec2pix
+	mask_x = np.array([np.ceil(xcen_pix-fullsamp_x_pix/2), np.floor(xcen_pix+fullsamp_x_pix/2)]).astype(int)
+	mask_y = np.array([np.ceil(ycen_pix-fullsamp_y_pix/2), np.floor(ycen_pix+fullsamp_y_pix/2)]).astype(int)
+
+	#mask out pixels outside this box
+	data = cube.unmasked_data[:]
+	data[:,:,0:mask_x[0]]=np.nan
+	data[:,:,mask_x[1]:]=np.nan
+	data[:,0:mask_y[0],:]=np.nan
+	data[:,mask_y[1]:,:]=np.nan
+
+	masked_cube = SpectralCube(data=data,wcs=wcs,header=cube.header)
+	masked_cube.write(filepath+'_fullysampled.fits',overwrite=True)
+	return masked_cube
+
+
+
 def make_moments(cube,filepath,outsuff):
 	mom0 = cube.moment(order=0)
 	mom1 = cube.moment(order=1)
@@ -34,9 +67,14 @@ def save_gaussfits(data,hdr,filepath,maptype,outsuff):
 	return
 
 filepath = '../Data/Disk_Map/M82_CII_map'
+filepath_mom = '../Data/Disk_Map/Moments/M82_CII_map'
 
 #load the cube
 cube = SpectralCube.read(filepath+'_cube.fits').with_spectral_unit(u.km/u.s)*u.K
+
+
+#mask to the fully sampled region
+cube = mask_out_undersampled(cube,filepath)
 
 #now mask based on the SNR
 if args.mask_level:
@@ -50,7 +88,7 @@ if np.isnan(level) == True:
 else:
 	outsuff = 'maskSNR'+str(int(level))
 	cube_masked = cube.with_mask(cube > level*rms)
-m0m,_,_=make_moments(cube_masked,filepath,outsuff)
+m0m,_,_=make_moments(cube_masked,filepath_mom,outsuff)
 
 
 #now make "moments" by fitting a Gaussian to each spectrum
@@ -93,13 +131,13 @@ for i in range(len(ix)):
 
 hdr = m0m.header
 hdr['BUNIT']='K'
-save_gaussfits(peak,hdr,filepath,'peak',outsuff)
-save_gaussfits(epeak,hdr,filepath,'epeak',outsuff)
+save_gaussfits(peak,hdr,filepath_mom,'peak',outsuff)
+save_gaussfits(epeak,hdr,filepath_mom,'epeak',outsuff)
 hdr['BUNIT']='km/s'
-save_gaussfits(vel,hdr,filepath,'vcen',outsuff)
-save_gaussfits(evel,hdr,filepath,'evcen',outsuff)
-save_gaussfits(fwhm,hdr,filepath,'fwhm',outsuff)
-save_gaussfits(efwhm,hdr,filepath,'efwhm',outsuff)
+save_gaussfits(vel,hdr,filepath_mom,'vcen',outsuff)
+save_gaussfits(evel,hdr,filepath_mom,'evcen',outsuff)
+save_gaussfits(fwhm,hdr,filepath_mom,'fwhm',outsuff)
+save_gaussfits(efwhm,hdr,filepath_mom,'efwhm',outsuff)
 
 #now do some masking of the vcen field
 maxdev = 40. #km/s
@@ -128,5 +166,5 @@ for i in range(1,vel.shape[0]-1):
 # print('Replaced %d single NaN pixels with median of neighbors. %.2f%% of pixels replaced.\n' 
 # 	%(sp_count,sp_count/len(vel)))
 
-save_gaussfits(vel,hdr,filepath,'vcen_cgrad',outsuff)
+save_gaussfits(vel,hdr,filepath_mom,'vcen_cgrad',outsuff)
 
