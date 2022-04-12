@@ -8,19 +8,22 @@ import pandas as pd
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 import astropy.units as u
+from astropy.convolution import Box1DKernel,convolve
+from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import upGREATUtils
 import seaborn as sns
-from astropy.convolution import Box1DKernel,convolve
+
 
 plt.rcParams['font.family']='serif'
 plt.rcParams['mathtext.rm'] = 'serif'
 plt.rcParams['mathtext.fontset'] = 'cm'
+plt.rcParams['font.size'] = 14
 
 #load some properties of M82
-gal_center = SkyCoord('09h55m52.72s 69d40m45.8s')
-distance = 3.5*u.Mpc
+gal_center = SkyCoord('09h55m52.72s 69d40m45.7s')
+distance = 3.63*u.Mpc
 
 n_pointings = 2
 n_pixels = 7 #pixels per pointing
@@ -33,8 +36,8 @@ co_color = 'k'
 hi_color = sns.color_palette('flare',as_cmap=True)(150)
 
 #get CO and HI velocity resolutions for smoothing
-co_dv = fits.open('../Data/Ancillary_Data/M82-NOEMA-30m-mask-merged.clean.fits')[0].header['CDELT3']/1E3 #km/s
-hi_dv = -1*fits.open('../Data/Ancillary_Data/m82_hi_24as_feathered_nhi.fits')[0].header['CDELT3']/1E3 #km/s
+# co_dv = fits.open('../Data/Ancillary_Data/M82-NOEMA-30m-mask-merged.clean.fits')[0].header['CDELT3']/1E3 #km/s
+# hi_dv = -1*fits.open('../Data/Ancillary_Data/m82_hi_24as_feathered_nhi.fits')[0].header['CDELT3']/1E3 #km/s
 
 for i in range(n_pointings):
 
@@ -61,26 +64,34 @@ for i in range(n_pointings):
 		cii_dv = header['CDELT1']/header['RESTFREQ']*2.9979E5 #km/s
 
 		#load the CO and HI data
-		co_dat = pd.read_csv('../Data/Outflow_Pointings/CO/outflow'+str(i+1)+'_pix'+str(pix_order_labels[j])+'.csv')
+		co_dat = pd.read_csv('../Data/Outflow_Pointings/CO/outflow'+str(i+1)+'_pix'+str(pix_order_labels[j])+'_smo.csv')
 		co_vel = co_dat['Velocity_kms'].values
 		co_spec = co_dat['Intensity_K'].values
 		co_sf = np.nanmax(cii_spec)/np.nanmax(co_spec)
 		co_spec_norm = co_spec*co_sf
 
-		hi_dat = pd.read_csv('../Data/Outflow_Pointings/HI/outflow'+str(i+1)+'_pix'+str(pix_order_labels[j])+'.csv')
+		hi_dat = pd.read_csv('../Data/Outflow_Pointings/HI/outflow'+str(i+1)+'_pix'+str(pix_order_labels[j])+'_smo.csv')
 		hi_vel = np.flip(hi_dat['Velocity_kms'].values)
 		hi_spec_cm2 = np.flip(hi_dat['Intensity_cm-2'].values)
 		hi_spec = hi_spec_cm2/(1.823E18) #Martini+2018, K
 		hi_sf = np.nanmax(cii_spec)/np.nanmax(hi_spec)
 		hi_spec_norm = hi_spec*hi_sf
 
-		#smooth the CO and HI data to the CII vel res
-		co_kernel = Box1DKernel(cii_dv/co_dv)
-		hi_kernel = Box1DKernel(cii_dv/hi_dv)
-		co_vel_smo = convolve(co_vel,co_kernel)
-		co_spec_smo = convolve(co_spec_norm,co_kernel)
-		hi_vel_smo = convolve(hi_vel,hi_kernel)
-		hi_spec_smo = convolve(hi_spec_norm,hi_kernel)
+		# #smooth the CO and HI data to the CII vel res
+		# co_kernel = Box1DKernel(cii_dv/co_dv)
+		# hi_kernel = Box1DKernel(cii_dv/hi_dv)
+		# co_vel_smo = convolve(co_vel,co_kernel)
+		# co_spec_smo = convolve(co_spec_norm,co_kernel)
+		# hi_vel_smo = convolve(hi_vel,hi_kernel)
+		# hi_spec_smo = convolve(hi_spec_norm,hi_kernel)
+
+		# #linearly interpolate the CO and HI spectra onto the same velocity grid
+		# cii_int = interp1d(cii_vel,cii_spec)
+		# cii_spec_smo = cii_int(cii_vel_smo)
+		# co_int = interp1d(co_vel,co_spec_norm)
+		# co_spec_smo = co_int(cii_vel_smo)
+		# hi_int = interp1d(hi_vel,hi_spec_norm)
+		# hi_spec_smo = hi_int(cii_vel_smo)
 
 
 		#get distance of this pixel from the GC
@@ -90,12 +101,15 @@ for i in range(n_pointings):
 		ax = plt.subplot(gs[this_row,start_cols[j]:start_cols[j]+2],)
 		c0=ax.fill_between(cii_vel,cii_spec,color=cii_color,alpha=0.5,step='pre')
 		c1,=ax.step(cii_vel,cii_spec,color=cii_color,lw=1.5,label='[CII]')
-		c2,=ax.step(co_vel_smo,co_spec_smo,color=co_color,lw=1.5,label='CO')#\\%.1e' %(1/co_sf))
-		c3,=ax.step(hi_vel_smo,hi_spec_smo,color=hi_color,lw=1.5,label='HI')#\\%.1e' %(1/hi_sf))
-		leg = plt.legend([(c0,c1),c2,c3],[c1.get_label(),c2.get_label(),c3.get_label()],
-			fontsize=plt.rcParams['font.size']-2,loc='upper left')
-		ax.text(0.5,0.95,pix_order_labels[j],ha='center',va='top',transform=ax.transAxes)
+		c2,=ax.step(co_vel,co_spec_norm,color=co_color,lw=1.75,label='CO')#\\%.1e' %(1/co_sf))
+		c3,=ax.step(hi_vel,hi_spec_norm,color=hi_color,lw=1.75,label='HI')#\\%.1e' %(1/hi_sf))
+		ax.text(0.05,0.95,pix_order_labels[j],ha='center',va='top',transform=ax.transAxes)
 		ax.text(0.975,0.95,'%.2f kpc' %np.round(dist_pc.value/1E3,2),ha='right',va='top',transform=ax.transAxes)
+
+		if j == n_pixels-1:
+			leg = plt.legend([(c0,c1),c2,c3],[c1.get_label(),c2.get_label(),c3.get_label()],
+				handlelength=1.5,fontsize=plt.rcParams['font.size']-2,loc='right',bbox_to_anchor=(1.35,0.5,0.2,0.2))
+
 
 		ax.set_xlim(-100,400)
 		if i==0:

@@ -35,8 +35,8 @@ def mask_out_undersampled(cube,filepath):
 	xcen_pix,ycen_pix = wcs.celestial.all_world2pix(center_AOR.ra.value,center_AOR.dec.value,1,ra_dec_order=True)
 	fullsamp_x_pix = fullsamp_x/arcsec2pix
 	fullsamp_y_pix = fullsamp_y/arcsec2pix
-	mask_x = np.array([np.ceil(xcen_pix-fullsamp_x_pix/2), np.floor(xcen_pix+fullsamp_x_pix/2)]).astype(int)
-	mask_y = np.array([np.ceil(ycen_pix-fullsamp_y_pix/2), np.floor(ycen_pix+fullsamp_y_pix/2)]).astype(int)
+	mask_x = np.array([np.floor(xcen_pix-fullsamp_x_pix/2), np.ceil(xcen_pix+fullsamp_x_pix/2)]).astype(int)
+	mask_y = np.array([np.floor(ycen_pix-fullsamp_y_pix/2), np.ceil(ycen_pix+fullsamp_y_pix/2)]).astype(int)
 
 	#mask out pixels outside this box
 	data = cube.unmasked_data[:]

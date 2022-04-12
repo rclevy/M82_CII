@@ -25,6 +25,7 @@ import pandas as pd
 plt.rcParams['font.family']='serif'
 plt.rcParams['mathtext.rm'] = 'serif'
 plt.rcParams['mathtext.fontset'] = 'cm'
+plt.rcParams['font.size'] = 14
 
 
 def gauss(x,a,b,c):
@@ -50,8 +51,8 @@ else:
 	fitsuff = ''
 
 #load some properties of M82
-gal_center = SkyCoord('09h55m52.72s 69d40m45.8s')
-distance = 3.5*u.Mpc
+gal_center = SkyCoord('09h55m52.72s 69d40m45.7s')
+distance = 3.63*u.Mpc
 
 n_pointings = 2
 n_pixels = 7 #pixels per pointing
@@ -129,7 +130,7 @@ for i in range(n_pointings):
 			#plot the data
 			ax.fill_between(new_vel,new_spec,color=cii_color,alpha=0.5,step='pre')
 			ax.step(new_vel,new_spec,color=cii_color)
-			ax.text(0.5,0.95,this_pix_label,ha='center',va='top',transform=ax.transAxes)
+			ax.text(0.05,0.95,this_pix_label,ha='center',va='top',transform=ax.transAxes)
 			ax.text(0.95,0.95,'%.2f kpc' %np.round(dist_pc.value/1E3,2),ha='right',va='top',transform=ax.transAxes)
 
 
@@ -138,6 +139,8 @@ for i in range(n_pointings):
 				fitinfo = pd.read_csv('../Data/Outflow_Pointings/CII_GaussianFits/outflow'+str(i+1)+'_pix'+str(pix_order_labels[j])+'_gaussianfitparams.csv')
 				Ipk = fitinfo['Peak'].values[0]
 				eIpk = fitinfo['ePeak'].values[0]
+				Iint = fitinfo['IntInten'].values[0]
+				eIint = fitinfo['eIntInten'].values[0]
 				Vc = fitinfo['Vcen'].values[0]
 				eVc = fitinfo['eVcen'].values[0]
 				sig = fitinfo['FWHM'].values[0]/2.355
@@ -145,9 +148,8 @@ for i in range(n_pointings):
 				chi2r = fitinfo['Chi2r'].values[0]
 				gauss_fit = gauss(this_vel,Ipk,Vc,sig)
 				ax.plot(this_vel,gauss_fit,color=fit_color,lw=2.)
-				#fit_str = '$\chi^2_r = %.2f$\n$\mathrn{I}_{\mathrm{peak}} = %.2f\pm%.2f \mathrm{~K}$\n$\mathrm{V}_0 = %1.f\pm%1.f \mathrm{~km~s}^{-1}$\n$\sigma_{\mathrm{V}} = %1.f\pm%1.f \mathrm{~km~s}^{-1}$' %(chi2r,Ipk,eIpk,Vc,eVc,sig,esig)
-				fit_str = '$\mathrm{I}_{\mathrm{peak}} = %.2f\pm%.2f \mathrm{~K}$\n$\mathrm{V}_0 = %1.f\pm%1.f \mathrm{~km~s}^{-1}$\n$\sigma_{\mathrm{V}} = %1.f\pm%1.f \mathrm{~km~s}^{-1}$' %(Ipk,eIpk,Vc,eVc,sig,esig)		
-				ax.text(0.025,0.85,fit_str,ha='left',va='top',transform=ax.transAxes,color=fit_color,fontsize=plt.rcParams['font.size']-1.5)
+				#fit_str = '$\mathrm{I}_{\mathrm{peak}} = %.2f\pm%.2f \mathrm{~K}$\n$\mathrm{V}_0 = %1.f\pm%1.f \mathrm{~km~s}^{-1}$\n$\sigma_{\mathrm{V}} = %1.f\pm%1.f \mathrm{~km~s}^{-1}$\n$\mathrm{I}_{\mathrm{int}} = %1.f\pm%1.f \mathrm{~K~km~s}^{-1}$' %(Ipk,eIpk,Vc,eVc,sig,esig,Iint,eIint)		
+				#ax.text(0.025,0.85,fit_str,ha='left',va='top',transform=ax.transAxes,color=fit_color,fontsize=plt.rcParams['font.size']-2)
 
 
 

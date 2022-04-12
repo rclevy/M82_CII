@@ -37,7 +37,7 @@ wcs_co = WCS(hdr_co)
 co = co[0].data
 co[co<0]=0.
 co = 1.222E6*co/((hdr_co['RESTFRQ']/1E9)**2*hdr_co['BMAJ']*hdr_co['BMIN']*3600**2)
-dist = 3.5E3 #kpc
+dist = 3.63E3 #kpc
 bmaj_co = hdr_co['BMAJ']*3600 #arcsec
 bmin_co = hdr_co['BMIN']*3600 #arcsec
 bpa_co = hdr_co['BPA'] #deg
@@ -158,7 +158,7 @@ im.cmap.set_over('k')
 im.cmap.set_under('w')
 im.cmap.set_bad('w')
 ax.contourf(hi,levels=lev,origin='lower',cmap=hmap,alpha=1.0)
-ax.contour(cii,origin='lower',levels=levels_cii,cmap=cmap_cii,linewidths=2.0,transform=ax.get_transform(wcs_cii))
+ax.contour(cii,origin='lower',levels=levels_cii,cmap=cmap_cii,linewidths=1.0,transform=ax.get_transform(wcs_cii))
 ax.set_xlim(xlimo)
 ax.set_ylim(ylimo)
 ax.coords[0].set_major_formatter('hh:mm:ss.s')
@@ -178,6 +178,7 @@ ax.text(np.mean([x_texto_sb,x_texto_sb+sb_kpc_pix]),y_texto*1.05,sb_kpc_text,col
 plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_fullHIFOV.pdf',dpi=300,metadata={'Creator':this_script})
 ax.set_xlim(xlim)
 ax.set_ylim(ylim)
+c1=ax.contour(cii,origin='lower',levels=levels_cii,cmap=cmap_cii,linewidths=2.5,transform=ax.get_transform(wcs_cii))
 b1=ax.add_patch(Ellipse((x_text,y_text), bmin_hi/arcsec2pix, bmaj_hi/arcsec2pix, bpa_hi, ec=outline_color_hi, fc='None',lw=3.0)) #plot the beam
 b2=ax.add_patch(Ellipse((x_text,y_text), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='None', fc='k',lw=2.0)) #plot the beam
 b3=ax.add_patch(Ellipse((x_text,y_text), bmin_cii/arcsec2pix, bmaj_cii/arcsec2pix, bpa_cii, ec=outline_color_cii, fc='None',lw=2.0)) #plot the beam
@@ -207,18 +208,20 @@ b2.remove()
 b3.remove()
 s1.remove()
 s2.remove()
+for c in c1.collections:
+	c.remove()
 plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_footprints_fullHIFOV.pdf',dpi=300,metadata={'Creator':this_script})
 
 
 #now add the spectra in an inset
-ax_in=ax.inset_axes([-0.03,0.01,0.5,0.5])
-spec = img.imread('../Plots/Outflow_Spectra/M82_CII_Outflow1_sky_10kms.png')
-ax_in.imshow(spec)
-ax_in.tick_params(axis='both',bottom=False,left=False,labelbottom=False,labelleft=False)
-for pos in ['bottom','top','left','right']:
-	ax_in.spines[pos].set_color(outline_color_cii)
-	ax_in.spines[pos].set_linewidth(2)
-plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_Spectra_fullHIFOV.pdf',dpi=300,metadata={'Creator':this_script})
+# ax_in=ax.inset_axes([-0.03,0.01,0.5,0.5])
+# spec = img.imread('../Plots/Outflow_Spectra/M82_CII_Outflow1_sky_10kms.png')
+# ax_in.imshow(spec)
+# ax_in.tick_params(axis='both',bottom=False,left=False,labelbottom=False,labelleft=False)
+# for pos in ['bottom','top','left','right']:
+# 	ax_in.spines[pos].set_color(outline_color_cii)
+# 	ax_in.spines[pos].set_linewidth(2)
+# plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_Spectra_fullHIFOV.pdf',dpi=300,metadata={'Creator':this_script})
 
 
 

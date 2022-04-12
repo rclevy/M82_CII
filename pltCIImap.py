@@ -20,7 +20,7 @@ from astropy.visualization import (ManualInterval, ImageNormalize, LogStretch, A
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import matplotlib.pyplot as plt
-from matplotlib.patches import (Ellipse, Circle)
+from matplotlib.patches import (Ellipse, Circle, Rectangle)
 from matplotlib.colors import ListedColormap
 import matplotlib.cm as cm
 import sys
@@ -34,6 +34,7 @@ plt.rcParams['font.family']='serif'
 plt.rcParams['mathtext.rm'] = 'serif'
 plt.rcParams['mathtext.fontset'] = 'cm'
 plt.rcParams['font.size'] = 24
+
 
 map_type = args.map_type
 map_types = ['mom0', 'mom1', 'mom2', 'intinten', 'peak', 'vcen', 'vcen_cgrad', 'fwhm', 'eintinten', 'epeak', 'evcen', 'efwhm']
@@ -84,15 +85,16 @@ data = data[0].data
 bmaj = hdr['BMAJ']*3600 #arcsec
 bmaj = hdr['BMIN']*3600 #arcsec
 bpa = hdr['BPA'] #deg
+if map_type == 'vcen_cgrad':
+	efname = '../Data/Disk_Map/Moments/M82_CII_map_evcen_'+masksuff
+else:
+	efname = '../Data/Disk_Map/Moments/M82_CII_map_e'+map_type+'_'+masksuff
+edata = fits.open(efname+'.fits')[0].data
+snr = np.abs(data)/np.abs(edata)
+
 
 #do additional masking
 if np.isnan(snr_mask_level)==False:
-	if map_type == 'vcen_cgrad':
-		efname = '../Data/Disk_Map/M82_CII_map_evcen_'+masksuff
-	else:
-		efname = '../Data/Disk_Map/M82_CII_map_e'+map_type+'_'+masksuff
-	edata = fits.open(efname+'.fits')[0].data
-	snr = np.abs(data)/np.abs(edata)
 	data[snr<snr_mask_level]=np.nan
 	fname = 'M82_CII_map_'+map_type+'_'+masksuff+'_'+'maskmapSNR'+str(int(snr_mask_level))
 
@@ -150,10 +152,23 @@ y_text_sb = ylim[0]+0.95*(ylim[1]-ylim[0])
 bmaj_pix = hdr['BMAJ']*3600/arcsec2pix
 bmin_pix = hdr['BMIN']*3600/arcsec2pix
 bpa = hdr['BPA']
-dist = 3.5E6 #pc
+dist = 3.63E6 #pc
 sb_pc = 200 #pc
 sb_pc_pix = sb_pc/dist*206265/arcsec2pix
 sb_pc_text = str(int(sb_pc))+' pc'
+
+
+#get info to draw fully-sampled map region
+center_AOR = SkyCoord('9h55m52.7250s +69d40m45.780s')
+ang_map = -20. #deg, but the cube is already rotated by this much
+fullsamp_x = 185.4 #arcsec
+fullsamp_y = 65.4 #arcsec
+xo,yo = wcs_co.all_world2pix(center_AOR.ra.value,center_AOR.dec.value,1,ra_dec_order=True)
+xl = fullsamp_x/arcsec2pix
+yl = fullsamp_y/arcsec2pix
+xor = ((-xl/2)*np.cos(np.radians(ang_map))-(-yl/2)*np.sin(np.radians(ang_map)))+xo
+yor = ((-xl/2)*np.sin(np.radians(ang_map))+(-yl/2)*np.cos(np.radians(ang_map)))+yo
+
 
 #plot the map
 fig=plt.figure(1,figsize=(14,10))
@@ -176,6 +191,10 @@ b1=ax.add_patch(Ellipse((x_text,y_text), bmaj_pix, bmin_pix, bpa, ec='None', fc=
 ax.plot([x_text_sb,x_text_sb-sb_pc_pix],[y_text_sb,y_text_sb],'-',color='k',lw=3)
 ax.text(np.mean([x_text_sb,x_text_sb-sb_pc_pix]),y_text_sb*0.985,sb_pc_text,
 	color='k',ha='center',va='top',fontsize=plt.rcParams['font.size']-2)
+ax.add_patch(Rectangle((xor,yor),xl,yl,angle=ang_map,ec='k',fc='None',linewidth=1.5,zorder=10))
+#add snr contours
+levels = np.array([5,10,25])
+ax.contour(snr,levels,colors='gray',linewidths=[0.5, 1.0, 1.5],transform=ax.get_transform(wcs))
 plt.savefig('../Plots/Center_Maps/'+fname+'.pdf',bbox_inches='tight',metadata={'Creator':this_script})
 
 
