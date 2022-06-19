@@ -81,7 +81,12 @@ if args.mask_level:
 	level = args.mask_level
 else:
 	level = np.nan
-rms = np.sqrt(np.nanmean(cube)**2)*u.K
+rms_full = np.sqrt(np.nanmean(cube)**2)*u.K
+cube_rmsignal = cube.with_mask(cube < 2*rms_full)
+rms = np.sqrt(np.nanmean(cube_rmsignal)**2)*u.K
+print('rms away from signal in 10 km/s channels = %.1f mK' %(rms.value*1000))
+
+
 if np.isnan(level) == True:
 	outsuff = 'nomask'
 	cube_masked = cube

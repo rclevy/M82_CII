@@ -35,6 +35,14 @@ plt.rcParams['mathtext.rm'] = 'serif'
 plt.rcParams['mathtext.fontset'] = 'cm'
 plt.rcParams['font.size'] = 24
 
+def MarkerSizeBeamScale(fig,bmaj,arcsec2pix):
+	#scale the size of the points in a scatter plot to the beam size
+	pperpix = fig.dpi/72. #X points/pixel
+	bmaj_pix = bmaj/arcsec2pix
+	bmaj_points = bmaj_pix*pperpix
+	s = bmaj_points**2
+	return s
+
 
 map_type = args.map_type
 map_types = ['mom0', 'mom1', 'mom2', 'intinten', 'peak', 'vcen', 'vcen_cgrad', 'fwhm', 'eintinten', 'epeak', 'evcen', 'efwhm']
@@ -73,9 +81,16 @@ else:
 if args.cmap:
 	cmap = cm.get_cmap(args.cmap)
 else:
-	#cmap = 'gray_r'
-	cmap = ListedColormap(sns.color_palette('mako_r',256, desat=0.8))
+	if (map_type == 'mom0') or (map_type == 'intinten'):
+		cmap = ListedColormap(sns.cubehelix_palette(start=1.1,rot=-0.65,light=0.9,dark=0.2,n_colors=256))
+	elif (map_type == 'peak') or (map_type == 'epeak'):
+		cmap = ListedColormap(sns.cubehelix_palette(start=0.6,rot=-0.65,light=0.9,dark=0.2,n_colors=256))
+	elif (map_type == 'fwhm') or (map_type == 'efwhm') or (map_type == 'mom2'):
+		cmap = 'viridis'
+	else:
+		cmap = 'RdYlBu_r'
 
+	
 #open the fits file
 fname = 'M82_CII_map_'+map_type+'_'+masksuff
 data = fits.open('../Data/Disk_Map/Moments/'+fname+'.fits')
@@ -118,9 +133,9 @@ else:
 	cb_ext = 'neither'
 
 if norm_type.casefold() == 'asinh'.casefold():	
-	norm=ImageNormalize(data,stretch=AsinhStretch(0.0998),interval=ManualInterval(vmin=clim[0],vmax=clim[1]))
+	norm=ImageNormalize(data,stretch=AsinhStretch(0.0998/10),interval=ManualInterval(vmin=clim[0],vmax=clim[1]))
 elif norm_type.casefold() == 'log'.casefold():
-	norm=ImageNormalize(data,stretch=LogStretch(),vmin=clim[0],vmax=clim[1])
+	norm=ImageNormalize(data,stretch=LogStretch(5000),vmin=clim[0],vmax=clim[1])
 else:
 	norm=ImageNormalize(data,stretch=LinearStretch(),interval=ManualInterval(vmin=clim[0],vmax=clim[1]))
 
@@ -185,7 +200,12 @@ ax.set_xlabel('R.A. (J2000)')
 ax.set_ylabel('Decl. (J2000)')
 ax.set_xlim(xlim)
 ax.set_ylim(ylim)
-cb = plt.colorbar(im,extend=cb_ext,shrink=0.7)
+if (map_type == 'mom0') or (map_type == 'intinten'):
+	t = np.arange(clim[0]+100,clim[1]+200,200).tolist()
+	t.insert(0,0)
+	cb = plt.colorbar(im,extend=cb_ext,shrink=0.7,ticks=t)
+else:
+	cb = plt.colorbar(im,extend=cb_ext,shrink=0.7)
 cb.set_label(map_type_str)
 b1=ax.add_patch(Ellipse((x_text,y_text), bmaj_pix, bmin_pix, bpa, ec='None', fc='k'))
 ax.plot([x_text_sb,x_text_sb-sb_pc_pix],[y_text_sb,y_text_sb],'-',color='k',lw=3)
@@ -193,8 +213,8 @@ ax.text(np.mean([x_text_sb,x_text_sb-sb_pc_pix]),y_text_sb*0.985,sb_pc_text,
 	color='k',ha='center',va='top',fontsize=plt.rcParams['font.size']-2)
 ax.add_patch(Rectangle((xor,yor),xl,yl,angle=ang_map,ec='k',fc='None',linewidth=1.5,zorder=10))
 #add snr contours
-levels = np.array([5,10,25])
-ax.contour(snr,levels,colors='gray',linewidths=[0.5, 1.0, 1.5],transform=ax.get_transform(wcs))
+#levels = np.array([5,10,25])
+#ax.contour(snr,levels,colors='gray',linewidths=[0.5, 1.0, 1.5],transform=ax.get_transform(wcs))
 plt.savefig('../Plots/Center_Maps/'+fname+'.pdf',bbox_inches='tight',metadata={'Creator':this_script})
 
 
@@ -233,9 +253,11 @@ for i in range(n_pixels):
 	else:
 		spec_val = np.inf
 	#find the color this corresponds to in the current colormap
-	cmap_frac = (spec_val-clim[0])/(clim[1]-clim[0])*256
-	spec_col = cmap(int(np.round(cmap_frac)))[0:3]
-	ax.add_patch(Circle((RA_pix,Dec_pix), bmaj_pix/2, ec='k', fc=spec_col, lw=1.))
+	# spec_val_norm = norm(spec_val).data[0]
+	# cmap_frac = (spec_val_norm-clim[0])/(clim[1]-clim[0])*256
+	# spec_col = cmap(int(np.round(cmap_frac)))[0:3]
+	# ax.add_patch(Circle((RA_pix,Dec_pix), bmaj_pix/2, ec='k', fc=spec_col, lw=1.))
+	ax.scatter(RA_pix,Dec_pix,s=MarkerSizeBeamScale(fig,bmaj_pix/2,1.),c=spec_val,cmap=cmap,norm=norm,edgecolors='k',linewidths=1.)
 
 
 new_ymin = ylim[0]-5*bmaj_pix
@@ -244,7 +266,10 @@ ax.set_ylim(new_ymin)
 b1.remove()
 cb.remove()
 ax.add_patch(Ellipse((x_text,new_y_text), bmaj_pix, bmin_pix, bpa, ec='None', fc='k'))
-cb = plt.colorbar(im,extend=cb_ext)
+if (map_type == 'mom0') or (map_type == 'intinten'):
+	cb = plt.colorbar(im,extend=cb_ext,ticks=t)
+else:
+	cb = plt.colorbar(im,extend=cb_ext)
 cb.set_label(map_type_str)
 plt.savefig('../Plots/Center_Maps/'+fname+'_outflow.pdf',bbox_inches='tight',metadata={'Creator':this_script})
 

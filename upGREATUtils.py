@@ -72,6 +72,25 @@ def pixel_order_from_class(plot_order_sky):
 	return spectrum_number_plot_order_upGREAT, spectrum_number_plot_order_sky
 
 
+def Tmb2Jy(Tmb):
+	#convert T_mb (K) to S (Jy)
+	#https://www-sofia.atlassian.net/wiki/spaces/OHFC8/pages/1703955/6.+GREAT#6.1.2.1---Imaging-Sensitivities
+	eta_mb = 0.67 #average
+	Tr = Tmb*eta_mb #below Eq 6-5
+	eta_fss = 0.97
+	Ta = Tr*eta_fss #Eq 6-5
+	S = 971*Ta #Jy, Eq 6-7
+	return S
+
+def Jy2Tmb(S):
+	#convert S (Jy) to T_mb (K)
+	#https://www-sofia.atlassian.net/wiki/spaces/OHFC8/pages/1703955/6.+GREAT#6.1.2.1---Imaging-Sensitivities
+	Ta = S/971 #K, Eq 6-7
+	eta_fss = 0.97
+	Tr = Ta/eta_fss #Eq 6-5
+	eta_mb = 0.67 #average
+	Tmb = Tr/eta_mb #K, below Eq 6-5
+	return Tmb
 
 
 

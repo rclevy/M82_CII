@@ -8,7 +8,7 @@ from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.cm as cm
 import matplotlib.patheffects as pe
 plt.rcParams['font.family'] = 'serif'
-plt.rcParams['font.size'] =14
+plt.rcParams['font.size'] = 24
 plt.rcParams['mathtext.rm'] = 'serif'
 plt.rcParams['mathtext.fontset'] = 'cm'
 from astropy.io import fits
@@ -20,37 +20,79 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 from scipy.signal import resample
+from scipy.ndimage import rotate
 import seaborn as sns
 import copy
 from mkGREATfootprint import mk_great_footprint
 from regions import Regions,CircleSkyRegion
 import aplpy
 import matplotlib.image as img
+from photutils.aperture import SkyEllipticalAperture,aperture_photometry
+
+
+def padding(array, xx, yy):
+	"""
+	:param array: numpy array
+	:param xx: desired height
+	:param yy: desirex width
+	:return: padded array
+	https://stackoverflow.com/questions/59241216/padding-numpy-arrays-to-a-specific-size
+	"""
+
+	h = array.shape[0]
+	w = array.shape[1]
+
+	a = (xx - h) // 2
+	aa = xx - a - h
+
+	b = (yy - w) // 2
+	bb = yy - b - w
+
+	return np.pad(array, pad_width=((a, aa), (b, bb)), mode='constant')
+
 
 
 #open Nico's M82 image
 
-fname_co = '../Data/Ancillary_Data/M82.CO.NOEMA+30m.peak.fits'
+#fname_co = '../Data/Ancillary_Data/M82.CO.NOEMA+30m.peak.fits'
+fname_co = '../Data/Ancillary_Data/M82.CO.30m.IRAM_reprocessed_peak.fits'
 co = fits.open(fname_co)
 hdr_co = co[0].header
 wcs_co = WCS(hdr_co)
 co = co[0].data
 co[co<0]=0.
-co = 1.222E6*co/((hdr_co['RESTFRQ']/1E9)**2*hdr_co['BMAJ']*hdr_co['BMIN']*3600**2)
+#co = 1.222E6*co/((hdr_co['RESTFRQ']/1E9)**2*hdr_co['BMAJ']*hdr_co['BMIN']*3600**2)
 dist = 3.63E3 #kpc
 bmaj_co = hdr_co['BMAJ']*3600 #arcsec
 bmin_co = hdr_co['BMIN']*3600 #arcsec
 bpa_co = hdr_co['BPA'] #deg
 
+# #trim the noisy edges of the CO map for plotting
+# co[0:268,:]=np.nan
+# co[1080:,:]=np.nan
+# co[696:,1470:]=np.nan
+# co[870:,1260:]=np.nan
+# co[:,1715:]=np.nan
+# co[0:414,0:776]=np.nan
+# co[0:724,0:448]=np.nan
+# co[:,0:222]=np.nan
+# co[0:391,1628:]=np.nan
+
+#trim the edges of the TP map
+co[0:10,:]=np.nan
+co[:,0:10]=np.nan
+co[-10:,:]=np.nan
+co[:,-10:]=np.nan
+
 
 #set colorbar limits
 vmin_co = 0.
-vmax_co = 10.
+vmax_co = 3.
 cbreak=0.0998 #default ds9 scaling
 #norm=ImageNormalize(co,stretch=LogStretch(),interval=ManualInterval(vmax=vmax,vmin=vmin))
 norm_co=ImageNormalize(co,stretch=AsinhStretch(cbreak),interval=ManualInterval(vmax=vmax_co,vmin=vmin_co))
 cmap_co = cm.get_cmap('gist_yarg')
-levels_co = np.logspace(np.log10(1.),1,5)
+levels_co = np.logspace(np.log10(0.15),np.log10(vmax_co),10)
 # co[:,0:300]=np.nan
 # co[:,1750:]=np.nan
 # co[0:250,:]=np.nan
@@ -65,20 +107,42 @@ cont = cont[0].data
 levels_cont = np.linspace(-0.00353959,0.0236673,num=4)
 
 #open the HI
-fname_hi = '../Data/Ancillary_Data/m82_hi_24as_mom0.fits'
+fname_hi = '../Data/Ancillary_Data/m82_hi_image_5kms_feathered_pbcor_mom0.fits'
 hi = fits.open(fname_hi)
 hdr_hi = hi[0].header
 wcs_hi = WCS(hdr_hi)
 hi = hi[0].data
-vmin_hi = 1E20
-vmax_hi = 1.5E21
+# vmin_hi = 1E20
+# vmax_hi = 1.5E21
+vmin_hi = 3.84
+vmax_hi = 800.
 lev = np.linspace(vmin_hi,vmax_hi,num=20)
 arcsec2pix = hdr_hi['CDELT2']*3600
 bmaj_hi = hdr_hi['BMAJ']*3600 #arcsec
 bmin_hi = hdr_hi['BMIN']*3600 #arcsec
 bpa_hi = hdr_hi['BPA'] #deg
 
-hi[950:1040,954:1050]=np.nan
+#mask out the center where there's HI absorption
+hi_cen = SkyCoord('9h55m53.0s +69d40m41.0s',frame='fk5')
+a = 58*u.arcsec
+b = 38*u.arcsec
+ang = 55*u.deg
+aper = SkyEllipticalAperture(hi_cen,a,b,theta=ang)
+aper_mask = aper.to_pixel(wcs_hi).to_mask(method='center')
+aper_mask.data = padding(aper_mask.data,hi.shape[1],hi.shape[0])
+aper_mask.data[aper_mask.data==1]=np.nan
+aper_mask.data[aper_mask.data==0]=1.
+hi = hi*aper_mask.data
+hi[np.isnan(hi)==True]=1.
+aper_mask.data[np.isnan(aper_mask.data)==True]=np.nanmax(hi)
+hi = hi*aper_mask.data
+hi[hi==1]=np.nan
+
+#save this filled version to a fits file
+hdu = fits.PrimaryHDU(data=hi,header=hdr_hi)
+hdul = fits.HDUList([hdu])
+hdul.writeto('../Data/Ancillary_Data/m82_hi_image_5kms_feathered_pbcor_mom0_fillcen.fits',overwrite=True)
+
 hmap = sns.color_palette('flare',as_cmap=True)
 outline_color_hi = hmap(150)
 
@@ -88,7 +152,7 @@ xlimz,ylimz = wcs_hi.all_world2pix([148.99166666666667,148.93749999999997],[69.6
 
 
 #open the SOFIA upgreat CII map
-fname_cii = '../Data/Disk_Map/Moments/M82_CII_map_peak_nomask.fits'
+fname_cii = '../Data/Disk_Map/Moments/M82_CII_map_peak_maskSNR5.fits'
 cii = fits.open(fname_cii)
 hdr_cii = cii[0].header
 wcs_cii = WCS(hdr_cii)
@@ -149,16 +213,15 @@ yor = ((-xl/2)*np.sin(np.radians(ang_map))+(-yl/2)*np.cos(np.radians(ang_map)))+
 # #f = aplpy.FITSFigure('../Data/M82_RGB_HI_CO_CII_2d.fits')
 # plt.close('all')
 
+
 fsz=14
-fig = plt.figure(1,figsize=(10,10))
+fig = plt.figure(1,figsize=(14,10))
 plt.clf()
 ax = plt.subplot(projection=wcs_hi)
-im=ax.imshow(co,origin='lower',cmap=cmap_co,vmin=vmin_co,vmax=vmax_co,transform=ax.get_transform(wcs_co))
-im.cmap.set_over('k')
-im.cmap.set_under('w')
-im.cmap.set_bad('w')
-ax.contourf(hi,levels=lev,origin='lower',cmap=hmap,alpha=1.0)
-ax.contour(cii,origin='lower',levels=levels_cii,cmap=cmap_cii,linewidths=1.0,transform=ax.get_transform(wcs_cii))
+im=ax.imshow(hi,origin='lower',cmap=hmap,vmin=vmin_hi,vmax=vmax_hi*1.25)
+ax.contourf(co,levels=levels_co,origin='lower',cmap=cmap_co,alpha=0.8,transform=ax.get_transform(wcs_co),extend='max')
+#ax.contour(cii,origin='lower',levels=levels_cii,colors='w',linewidths=2.5,transform=ax.get_transform(wcs_cii))
+ax.contour(cii,origin='lower',levels=levels_cii,cmap=cmap_cii,linewidths=1.5,transform=ax.get_transform(wcs_cii))
 ax.set_xlim(xlimo)
 ax.set_ylim(ylimo)
 ax.coords[0].set_major_formatter('hh:mm:ss.s')
@@ -170,36 +233,42 @@ ax.coords[1].set_minor_frequency(4)
 plt.xlabel('R.A. (J2000)')
 plt.ylabel('Decl. (J2000)',labelpad=-1)
 ax.set_rasterization_zorder(10)
+ax.add_patch(Ellipse((x_texto,y_texto), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='k', fc='None',lw=2.0)) #plot the beam
 ax.add_patch(Ellipse((x_texto,y_texto), bmin_hi/arcsec2pix, bmaj_hi/arcsec2pix, bpa_hi, ec=outline_color_hi, fc='None',lw=3.0)) #plot the beam
-ax.add_patch(Ellipse((x_texto,y_texto), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='None', fc='k',lw=2.0)) #plot the beam
 ax.add_patch(Ellipse((x_texto,y_texto), bmin_cii/arcsec2pix, bmaj_cii/arcsec2pix, bpa_cii, ec=outline_color_cii, fc='None',lw=2.0)) #plot the beam
 ax.plot([x_texto_sb,x_texto_sb+sb_kpc_pix],[y_texto,y_texto],'-',color='k',lw=3)
-ax.text(np.mean([x_texto_sb,x_texto_sb+sb_kpc_pix]),y_texto*1.05,sb_kpc_text,color='k',ha='center',va='bottom')
-plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_fullHIFOV.pdf',dpi=300,metadata={'Creator':this_script})
+ax.text(np.mean([x_texto_sb,x_texto_sb+sb_kpc_pix]),y_texto*1.01,sb_kpc_text,color='k',ha='center',va='bottom')
+plt.savefig('../Plots/Composite_Maps/M82_HI_CO_CII_fullHIFOV.pdf',dpi=300,metadata={'Creator':this_script})
 ax.set_xlim(xlim)
 ax.set_ylim(ylim)
+c0=ax.contour(cii,origin='lower',levels=levels_cii,colors='w',linewidths=3.5,transform=ax.get_transform(wcs_cii))
 c1=ax.contour(cii,origin='lower',levels=levels_cii,cmap=cmap_cii,linewidths=2.5,transform=ax.get_transform(wcs_cii))
+b2=ax.add_patch(Ellipse((x_text,y_text), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='k', fc='None',lw=2.0)) #plot the beam
 b1=ax.add_patch(Ellipse((x_text,y_text), bmin_hi/arcsec2pix, bmaj_hi/arcsec2pix, bpa_hi, ec=outline_color_hi, fc='None',lw=3.0)) #plot the beam
-b2=ax.add_patch(Ellipse((x_text,y_text), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='None', fc='k',lw=2.0)) #plot the beam
 b3=ax.add_patch(Ellipse((x_text,y_text), bmin_cii/arcsec2pix, bmaj_cii/arcsec2pix, bpa_cii, ec=outline_color_cii, fc='None',lw=2.0)) #plot the beam
 b1.set_path_effects([pe.Stroke(linewidth=4.0, foreground='w'),pe.Normal()])
 b3.set_path_effects([pe.Stroke(linewidth=3.0, foreground='w'),pe.Normal()])
 s1,=ax.plot([x_text_sb,x_text_sb+sb_pc_pix],[y_text,y_text],'-',color='w',lw=3)
-s2=ax.text(np.mean([x_text_sb,x_text_sb+sb_pc_pix]),y_text*1.005,sb_pc_text,color='w',ha='center',va='bottom')
-plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII.pdf',dpi=300,metadata={'Creator':this_script})
+s2=ax.text(np.mean([x_text_sb,x_text_sb+sb_pc_pix]),y_text*1.001,sb_pc_text,color='w',ha='center',va='bottom')
+plt.savefig('../Plots/Composite_Maps/M82_HI_CO_CII.pdf',dpi=300,metadata={'Creator':this_script})
 
-
-ax.add_patch(Rectangle((xor,yor),xl,yl,angle=ang_map,ec=outline_color_cii,fc='None',linewidth=1.5,zorder=10))
+lw = 2.5
+dlw = 1.0
+ax.add_patch(Rectangle((xor,yor),xl,yl,angle=ang_map,ec='w',fc='None',linewidth=lw+dlw,zorder=10))
+ax.add_patch(Rectangle((xor,yor),xl,yl,angle=ang_map,ec=outline_color_cii,fc='None',linewidth=lw,zorder=10))
 for i in range(len(fp)):
 	this_fp = fp[i]
-	this_fp.visual['linewidth'] = 1.5
+	this_fp.visual['linewidth'] = lw+dlw
+	this_fp.visual['color'] = 'w'
+	this_fp.to_pixel(wcs_hi).plot()
+	this_fp.visual['linewidth'] = lw
 	this_fp.visual['color'] = outline_color_cii
 	this_fp.to_pixel(wcs_hi).plot()
-plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_footprints.pdf',dpi=300,metadata={'Creator':this_script})
+plt.savefig('../Plots/Composite_Maps/M82_HI_CO_CII_footprints.pdf',dpi=300,metadata={'Creator':this_script})
 ax.set_xlim(xlimo)
 ax.set_ylim(ylimo)
+ax.add_patch(Ellipse((x_texto,y_texto), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='k', fc='None',lw=2.0)) #plot the beam
 ax.add_patch(Ellipse((x_texto,y_texto), bmin_hi/arcsec2pix, bmaj_hi/arcsec2pix, bpa_hi, ec=outline_color_hi, fc='None',lw=3.0)) #plot the beam
-ax.add_patch(Ellipse((x_texto,y_texto), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='None', fc='k',lw=2.0)) #plot the beam
 ax.add_patch(Ellipse((x_texto,y_texto), bmin_cii/arcsec2pix, bmaj_cii/arcsec2pix, bpa_cii, ec=outline_color_cii, fc='None',lw=2.0)) #plot the beam
 # ax.plot([x_texto_sb,x_texto_sb+sb_kpc_pix],[y_texto,y_texto],'-',color='k',lw=3)
 # ax.text(np.mean([x_texto_sb,x_texto_sb+sb_kpc_pix]),y_texto*1.05,sb_kpc_text,color='k',ha='center',va='bottom')
@@ -210,7 +279,76 @@ s1.remove()
 s2.remove()
 for c in c1.collections:
 	c.remove()
-plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_footprints_fullHIFOV.pdf',dpi=300,metadata={'Creator':this_script})
+for c in c0.collections:
+	c.remove()
+plt.savefig('../Plots/Composite_Maps/M82_HI_CO_CII_footprints_fullHIFOV.pdf',dpi=300,metadata={'Creator':this_script})
+
+
+
+# fsz=14
+# fig = plt.figure(1,figsize=(10,10))
+# plt.clf()
+# ax = plt.subplot(projection=wcs_hi)
+# im=ax.imshow(co,origin='lower',cmap=cmap_co,vmin=vmin_co,vmax=vmax_co,transform=ax.get_transform(wcs_co))
+# im.cmap.set_over('k')
+# im.cmap.set_under('w')
+# im.cmap.set_bad('w')
+# ax.contourf(hi,levels=lev,origin='lower',cmap=hmap,alpha=1.0)
+# #ax.contour(cii,origin='lower',levels=levels_cii,colors='w',linewidths=2.5,transform=ax.get_transform(wcs_cii))
+# ax.contour(cii,origin='lower',levels=levels_cii,cmap=cmap_cii,linewidths=1.5,transform=ax.get_transform(wcs_cii))
+# ax.set_xlim(xlimo)
+# ax.set_ylim(ylimo)
+# ax.coords[0].set_major_formatter('hh:mm:ss.s')
+# ax.coords[0].set_separator(('$^{\mathrm{h}}$','$^{\mathrm{m}}$','$^{\mathrm{s}}$'))
+# ax.coords[0].display_minor_ticks(True)
+# ax.coords[1].display_minor_ticks(True)
+# ax.coords[0].set_minor_frequency(4)
+# ax.coords[1].set_minor_frequency(4)
+# plt.xlabel('R.A. (J2000)')
+# plt.ylabel('Decl. (J2000)',labelpad=-1)
+# ax.set_rasterization_zorder(10)
+# ax.add_patch(Ellipse((x_texto,y_texto), bmin_hi/arcsec2pix, bmaj_hi/arcsec2pix, bpa_hi, ec=outline_color_hi, fc='None',lw=3.0)) #plot the beam
+# ax.add_patch(Ellipse((x_texto,y_texto), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='None', fc='k',lw=2.0)) #plot the beam
+# ax.add_patch(Ellipse((x_texto,y_texto), bmin_cii/arcsec2pix, bmaj_cii/arcsec2pix, bpa_cii, ec=outline_color_cii, fc='None',lw=2.0)) #plot the beam
+# ax.plot([x_texto_sb,x_texto_sb+sb_kpc_pix],[y_texto,y_texto],'-',color='k',lw=3)
+# ax.text(np.mean([x_texto_sb,x_texto_sb+sb_kpc_pix]),y_texto*1.05,sb_kpc_text,color='k',ha='center',va='bottom')
+# plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_fullHIFOV.pdf',dpi=300,metadata={'Creator':this_script})
+# ax.set_xlim(xlim)
+# ax.set_ylim(ylim)
+# c0=ax.contour(cii,origin='lower',levels=levels_cii,colors='w',linewidths=3.5,transform=ax.get_transform(wcs_cii))
+# c1=ax.contour(cii,origin='lower',levels=levels_cii,cmap=cmap_cii,linewidths=2.5,transform=ax.get_transform(wcs_cii))
+# b1=ax.add_patch(Ellipse((x_text,y_text), bmin_hi/arcsec2pix, bmaj_hi/arcsec2pix, bpa_hi, ec=outline_color_hi, fc='None',lw=3.0)) #plot the beam
+# b2=ax.add_patch(Ellipse((x_text,y_text), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='None', fc='k',lw=2.0)) #plot the beam
+# b3=ax.add_patch(Ellipse((x_text,y_text), bmin_cii/arcsec2pix, bmaj_cii/arcsec2pix, bpa_cii, ec=outline_color_cii, fc='None',lw=2.0)) #plot the beam
+# b1.set_path_effects([pe.Stroke(linewidth=4.0, foreground='w'),pe.Normal()])
+# b3.set_path_effects([pe.Stroke(linewidth=3.0, foreground='w'),pe.Normal()])
+# s1,=ax.plot([x_text_sb,x_text_sb+sb_pc_pix],[y_text,y_text],'-',color='w',lw=3)
+# s2=ax.text(np.mean([x_text_sb,x_text_sb+sb_pc_pix]),y_text*1.005,sb_pc_text,color='w',ha='center',va='bottom')
+# plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII.pdf',dpi=300,metadata={'Creator':this_script})
+
+
+# ax.add_patch(Rectangle((xor,yor),xl,yl,angle=ang_map,ec=outline_color_cii,fc='None',linewidth=1.5,zorder=10))
+# for i in range(len(fp)):
+# 	this_fp = fp[i]
+# 	this_fp.visual['linewidth'] = 1.5
+# 	this_fp.visual['color'] = outline_color_cii
+# 	this_fp.to_pixel(wcs_hi).plot()
+# plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_footprints.pdf',dpi=300,metadata={'Creator':this_script})
+# ax.set_xlim(xlimo)
+# ax.set_ylim(ylimo)
+# ax.add_patch(Ellipse((x_texto,y_texto), bmin_hi/arcsec2pix, bmaj_hi/arcsec2pix, bpa_hi, ec=outline_color_hi, fc='None',lw=3.0)) #plot the beam
+# ax.add_patch(Ellipse((x_texto,y_texto), bmin_co/arcsec2pix, bmaj_co/arcsec2pix, bpa_co, ec='None', fc='k',lw=2.0)) #plot the beam
+# ax.add_patch(Ellipse((x_texto,y_texto), bmin_cii/arcsec2pix, bmaj_cii/arcsec2pix, bpa_cii, ec=outline_color_cii, fc='None',lw=2.0)) #plot the beam
+# # ax.plot([x_texto_sb,x_texto_sb+sb_kpc_pix],[y_texto,y_texto],'-',color='k',lw=3)
+# # ax.text(np.mean([x_texto_sb,x_texto_sb+sb_kpc_pix]),y_texto*1.05,sb_kpc_text,color='k',ha='center',va='bottom')
+# b1.remove()
+# b2.remove()
+# b3.remove()
+# s1.remove()
+# s2.remove()
+# for c in c1.collections:
+# 	c.remove()
+# plt.savefig('../Plots/Composite_Maps/M82_CO_HI_CII_footprints_fullHIFOV.pdf',dpi=300,metadata={'Creator':this_script})
 
 
 #now add the spectra in an inset
