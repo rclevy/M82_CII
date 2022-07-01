@@ -32,8 +32,11 @@ n_cols = int(np.floor(n_pixels/n_rows)*n_rows)
 
 #set up plotting colors, same as in pltCompositeImage.py
 cii_color = sns.color_palette('crest',as_cmap=True)(150)
-co_color = 'k'
+co_color = '0.33'
 hi_color = sns.color_palette('flare',as_cmap=True)(150)
+
+co_norms = np.zeros((n_pixels,))
+hi_norms = np.zeros((n_pixels,))
 
 #get CO and HI velocity resolutions for smoothing
 # co_dv = fits.open('../Data/Ancillary_Data/M82-NOEMA-30m-mask-merged.clean.fits')[0].header['CDELT3']/1E3 #km/s
@@ -62,19 +65,25 @@ for i in range(n_pointings):
 		cii_spec = np.flip(cii_spec)
 		#cii_spec_norm = cii_spec/np.nanmax(cii_spec)
 		cii_dv = header['CDELT1']/header['RESTFREQ']*2.9979E5 #km/s
+		cii_vix = np.where((cii_vel>-100) & (cii_vel < 400))
+		cii_max = np.nanmax(cii_spec[cii_vix])
 
 		#load the CO and HI data
 		co_dat = pd.read_csv('../Data/Outflow_Pointings/CO_TP/outflow'+str(i+1)+'_pix'+str(pix_order_labels[j])+'_smo.csv')
 		co_vel = co_dat['Velocity_kms'].values
 		co_spec = co_dat['Intensity_K'].values
-		co_sf = np.nanmax(cii_spec)/np.nanmax(co_spec)
+		co_vix = np.where((co_vel>-100) & (co_vel < 400))
+		co_sf = cii_max/np.nanmax(co_spec[co_vix])
+		co_norms[j] = 1/co_sf
 		co_spec_norm = co_spec*co_sf
 
 		hi_dat = pd.read_csv('../Data/Outflow_Pointings/HI/outflow'+str(i+1)+'_pix'+str(pix_order_labels[j])+'_smo.csv')
 		hi_vel = np.flip(hi_dat['Velocity_kms'].values)
 		hi_spec = np.flip(hi_dat['Intensity_K'].values)
 		#hi_spec = hi_spec_cm2/(1.823E18) #Martini+2018, K
-		hi_sf = np.nanmax(cii_spec)/np.nanmax(hi_spec)
+		hi_vix = np.where((hi_vel>-100) & (hi_vel < 400))
+		hi_sf = cii_max/np.nanmax(hi_spec[hi_vix])
+		hi_norms[j] = 1/hi_sf
 		hi_spec_norm = hi_spec*hi_sf
 
 		# #smooth the CO and HI data to the CII vel res
@@ -101,15 +110,19 @@ for i in range(n_pointings):
 		ax = plt.subplot(gs[this_row,start_cols[j]:start_cols[j]+2],)
 		c0=ax.fill_between(cii_vel,cii_spec,color=cii_color,alpha=0.5,step='pre')
 		c1,=ax.step(cii_vel,cii_spec,color=cii_color,lw=1.5,label='[CII]')
-		c2,=ax.step(co_vel,co_spec_norm,color=co_color,lw=1.75,label='CO (norm)')#\\%.1e' %(1/co_sf))
-		c3,=ax.step(hi_vel,hi_spec_norm,color=hi_color,lw=1.75,label='HI (norm)')#\\%.1e' %(1/hi_sf))
+		c2,=ax.step(co_vel,co_spec_norm,color=co_color,lw=1.75,label='CO')#\\%.1e' %(1/co_sf))
+		c3,=ax.step(hi_vel,hi_spec_norm,color=hi_color,lw=1.75,label='HI')#\\%.1e' %(1/hi_sf))
 		ax.text(0.05,0.95,pix_order_labels[j],ha='center',va='top',transform=ax.transAxes)
 		ax.text(0.975,0.95,'%.2f kpc' %np.round(dist_pc.value/1E3,2),ha='right',va='top',transform=ax.transAxes)
 
+
+		ax.text(0.025,0.8,'CO/%i' %(1/co_sf),color=co_color,fontsize=plt.rcParams['font.size']-3,ha='left',va='top',transform=ax.transAxes)
+		ax.text(0.025,0.7,'HI/%i' %(1/hi_sf),color=hi_color,fontsize=plt.rcParams['font.size']-3,ha='left',va='top',transform=ax.transAxes)
+
 		# if j == n_pixels-1:
-		if j == 1:
+		if j == 0:
 			leg = plt.legend([(c0,c1),c2,c3],[c1.get_label(),c2.get_label(),c3.get_label()],
-				handlelength=1.25,fontsize=plt.rcParams['font.size']-2,loc='right',bbox_to_anchor=(1.6,0.5,0.2,0.2))
+				handlelength=1.25,fontsize=plt.rcParams['font.size']-2,loc='center left',bbox_to_anchor=(-0.6,0.65,0.2,0.2))
 
 
 		ax.set_xlim(-100,400)
@@ -126,3 +139,8 @@ for i in range(n_pointings):
 			ax.set_xlabel('V$_{\mathrm{LSRK}}$ (km s$^{-1}$)')
 			ax.set_ylabel('T$_{\mathrm{mb}}$ (K)')
 	plt.savefig('../Plots/Outflow_Spectra/M82_CII_CO_HI_Outflow'+str(i+1)+'.pdf',bbox_inches='tight',metadata={'Creator':this_script})
+
+	#save CO and HI scale factors
+	tab = {'Pixel_Number': pix_order_labels, 'ICO_ICII': co_norms, 'IHI_ICII': hi_norms}
+	df = pd.DataFrame(tab)
+	df.to_csv('../Data/Outflow_Pointings/CO_HI_normalizations_Outflow'+str(i+1)+'.csv',index=False)

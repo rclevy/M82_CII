@@ -152,15 +152,18 @@ xlimz,ylimz = wcs_hi.all_world2pix([148.99166666666667,148.93749999999997],[69.6
 
 
 #open the SOFIA upgreat CII map
-fname_cii = '../Data/Disk_Map/Moments/M82_CII_map_peak_maskSNR5.fits'
+fname_cii = '../Data/Disk_Map/Moments/M82_CII_map_mom0_maskSNR2.fits'
 cii = fits.open(fname_cii)
 hdr_cii = cii[0].header
 wcs_cii = WCS(hdr_cii)
 cii = cii[0].data
+print(np.nanmax(cii))
 cmap_cii = sns.color_palette('crest',as_cmap=True)
-vmin_cii = 1.
-vmax_cii = 10.
-levels_cii = np.linspace(vmin_cii,vmax_cii,7)
+# vmin_cii = 1.
+# vmax_cii = 10.
+vmin_cii = 200.
+vmax_cii = 1200.
+levels_cii = np.linspace(vmin_cii,vmax_cii,6)
 #cii[22:,:]=np.nan
 bmaj_cii = hdr_cii['BMAJ']*3600 #arcsec
 bmin_cii = hdr_cii['BMIN']*3600 #arcsec

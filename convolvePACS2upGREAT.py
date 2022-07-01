@@ -5,8 +5,10 @@ import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.convolution import convolve
+import astropy.units as u
 from scipy.ndimage import zoom
 from scipy.optimize import curve_fit
+from spectral_cube import SpectralCube
 
 #open the PACS cube
 cube = fits.open('../Data/Ancillary_Data/Herschel_PACS_spec_158um_cube.fits')
@@ -50,28 +52,61 @@ hdu = fits.ImageHDU(data=image_conv,header=hdr_conv)
 hdul = fits.HDUList([hdu0,hdu])
 hdul.writeto('../Data/Ancillary_Data/Herschel_PACS_spec_158um_cube_14asGaussPSF.fits',overwrite=True)
 
+#make peak and integrated intensity maps from the background subtracted cube
+wl0 = cube[0].header['MEANWAVE']*u.micron
+z = cube[0].header['REDSHFTV']
+rest_wl = wl0/(1+z)
+hdr_conv['CTYPE3']='WAVE'
+c = SpectralCube(data=image_conv*u.Jy/u.pixel,wcs=WCS(hdr_conv)).with_spectral_unit(u.km/u.s,velocity_convention='radio',rest_value=rest_wl)
+c.allow_huge_operations = True
+
+#only compute the moments over the same velocity range as the [CII] data for consistency
+cii_cube = SpectralCube.read('../Data/Disk_Map/M82_CII_map_cube.fits').with_spectral_unit(u.km/u.s)*u.K
+cii_v = cii_cube.spectral_axis.value #km/s
+c = c.spectral_slab(np.nanmin(cii_v)*u.km/u.s,np.nanmax(cii_v)*u.km/u.s)
 
 #now fit with a Gaussian at each pixel
 #remove continuum/baseline and measure [CII] peak intensity
+#and so peak and intinten are measiured in the same way as the SOFIA data
 def gauss(x,a,b,c,d):
 	return a*np.exp((-(x-b)**2/(2*c**2)))+d
 
 peak = np.zeros((image_conv.shape[1],image_conv.shape[2]))
 bkgd = np.zeros((image_conv.shape[1],image_conv.shape[2]))
-#make a fake spectral axis, since we only want the peak, it doesn't matter
-chans = np.arange(1,image_conv.shape[0]+1,1)
+intinten = np.zeros((image_conv.shape[1],image_conv.shape[2]))
+chans =  np.flip(cii_v)
 bounds = [[0.,chans[0],0.,0.],[np.inf,chans[-1],np.inf,np.inf]]
 for i in range(image_conv.shape[1]):
 	for j in range(image_conv.shape[2]):
-		this_spec = image_conv[:,i,j]
+		this_spec = c[:,i,j].value
 		if np.all(np.isnan(this_spec))==True:
 			peak[i,j] = np.nan
 			bkgd[i,j] = np.nan
+			intinten[i,j] = np.nan
 		else:
 			idx = np.where(np.isnan(this_spec)==False)
+			init = [np.nanmax(this_spec[idx]),250.,100.,0.]
 			popt,_ = curve_fit(gauss,chans[idx],this_spec[idx],bounds=bounds)
 			peak[i,j]=popt[0]
 			bkgd[i,j]=popt[-1]
+			intinten[i,j] = popt[0]*popt[2]*np.sqrt(np.pi/2)
+
+
+#now save the peak map
+wcs_peak = WCS(hdr).celestial
+hdr_peak = wcs_peak.to_header()
+hdr_peak['BUNIT'] = hdr['BUNIT']
+hdu = fits.PrimaryHDU(data=peak,header=hdr_peak)
+hdul = fits.HDUList([hdu])
+hdul.writeto('../Data/Ancillary_Data/Herschel_PACS_158um_peak_14asGaussPSF_contsub.fits',overwrite=True)
+
+wcs_intinten = WCS(hdr).celestial
+hdr_intinten = wcs_intinten.to_header()
+hdr_intinten['BUNIT'] = hdr['BUNIT']+' km s-1'
+hdu = fits.PrimaryHDU(data=intinten,header=hdr_intinten)
+hdul = fits.HDUList([hdu])
+hdul.writeto('../Data/Ancillary_Data/Herschel_PACS_158um_intinten_14asGaussPSF_contsub.fits',overwrite=True)
+
 
 #save the background subtracted cube
 image_conv_contsub = np.zeros_like(image_conv)
@@ -82,12 +117,17 @@ hdul = fits.HDUList([hdu0,hdu])
 hdul.writeto('../Data/Ancillary_Data/Herschel_PACS_spec_158um_cube_14asGaussPSF_contsub.fits',overwrite=True)
 
 
-#now save the peak map
-# peak = np.nanmax(image_conv,axis=0)
-wcs_peak = WCS(hdr).celestial
-hdr_peak = wcs_peak.to_header()
-hdr_peak['BUNIT'] = hdr['BUNIT']
-hdu = fits.PrimaryHDU(data=peak,header=hdr_peak)
-hdul = fits.HDUList([hdu])
-hdul.writeto('../Data/Ancillary_Data/Herschel_PACS_158um_peak_14asGaussPSF_contsub.fits',overwrite=True)
+# peak = c.max(axis=0)
+# peak.write('../Data/Ancillary_Data/Herschel_PACS_158um_peak_14asGaussPSF_contsub.fits',overwrite=True)
+
+# #save mom0
+# cc = c.unmasked_data[:].value-bkgd
+# dv = chans[0]-chans[1]
+# mom0 = np.nansum(cc,axis=0)*dv
+# hdu = fits.PrimaryHDU(data=mom0,header=hdr_intinten)
+# hdul = fits.HDUList([hdu])
+# hdul.writeto('../Data/Ancillary_Data/Herschel_PACS_158um_mom0_14asGaussPSF_contsub.fits',overwrite=True)
+
+
+
 

@@ -45,7 +45,7 @@ def MarkerSizeBeamScale(fig,bmaj,arcsec2pix):
 
 
 map_type = args.map_type
-map_types = ['mom0', 'mom1', 'mom2', 'intinten', 'peak', 'vcen', 'vcen_cgrad', 'fwhm', 'eintinten', 'epeak', 'evcen', 'efwhm']
+map_types = ['mom0', 'mom1', 'mom2', 'max', 'intinten', 'peak', 'vcen', 'vcen_cgrad', 'fwhm', 'eintinten', 'epeak', 'evcen', 'efwhm']
 
 if map_type not in map_types:
 	print('Error: map type \''+map_type+'\' not valid! Valid options are %s' %map_types)
@@ -53,7 +53,7 @@ if map_type not in map_types:
 
 if (map_type == 'mom0') or (map_type == 'intinten'):
 	map_type_str = 'Integrated Intensity (K km s$^{-1}$)'
-elif (map_type == 'peak') or (map_type == 'epeak'):
+elif (map_type == 'peak') or (map_type == 'epeak') or (map_type == 'max'):
 	map_type_str = 'Peak Intensity (K)'
 elif (map_type == 'fwhm') or (map_type == 'efwhm') or (map_type == 'mom2'):
 	map_type_str = 'FWHM Velocity Dispersion (km s$^{-1})$'
@@ -83,13 +83,12 @@ if args.cmap:
 else:
 	if (map_type == 'mom0') or (map_type == 'intinten'):
 		cmap = ListedColormap(sns.cubehelix_palette(start=1.1,rot=-0.65,light=0.9,dark=0.2,n_colors=256))
-	elif (map_type == 'peak') or (map_type == 'epeak'):
+	elif (map_type == 'peak') or (map_type == 'epeak') or (map_type == 'max'):
 		cmap = ListedColormap(sns.cubehelix_palette(start=0.6,rot=-0.65,light=0.9,dark=0.2,n_colors=256))
 	elif (map_type == 'fwhm') or (map_type == 'efwhm') or (map_type == 'mom2'):
 		cmap = 'viridis'
 	else:
 		cmap = 'RdYlBu_r'
-
 	
 #open the fits file
 fname = 'M82_CII_map_'+map_type+'_'+masksuff
@@ -233,31 +232,56 @@ for i in range(n_pixels):
 	Dec = this_fp.center.dec.value
 	RA_pix,Dec_pix = wcs_co.all_world2pix(RA,Dec,1,ra_dec_order=True)
 	#open the fit params
-	p = pd.read_csv('../Data/Outflow_Pointings/CII_GaussianFits/outflow1_pix'+str(reg_order[i])+'_gaussianfitparams.csv')
+	p1 = pd.read_csv('../Data/Outflow_Pointings/CII_GaussianFits/outflow1_pix'+str(reg_order[i])+'_gaussianfitparams.csv')
+	p1.rename(columns={'rms':'rms_g'},inplace=True)
+	p2 = pd.read_csv('../Data/Outflow_Pointings/CII_Moments/outflow1_pix'+str(reg_order[i])+'_momentparams.csv')
+	p = pd.concat([p1,p2],axis=1,join='inner')
 	if map_type == 'peak':
 		spec_val = p['Peak'].values[0]
 	elif map_type == 'epeak':
 		spec_val = p['ePeak'].values[0]
-	elif (map_type == 'vcen') or (map_type=='vcen_cgrad') or (map_type=='mom1'):
+	elif (map_type == 'vcen') or (map_type=='vcen_cgrad'):
 		spec_val = p['Vcen'].values[0]
-	elif (map_type == 'evcen') or (map_type == 'emom1'):
+	elif (map_type == 'evcen'):
 		spec_val = p['eVcen'].values[0]
-	elif (map_type == 'fwhm') or (map_type == 'mom2'):
+	elif (map_type == 'fwhm'):
 		spec_val = p['FWHM'].values[0]
-	elif (map_type == 'efwhm') or (map_type == 'emom2'):
+	elif (map_type == 'efwhm'):
 		spec_val = p['eFWHM'].values[0]
-	elif (map_type == 'mom0') or (map_type=='intinten'):
+	elif (map_type=='intinten'):
 		spec_val = p['IntInten'].values[0]
 	elif map_type=='eintinten':
 		spec_val = p['eIntInten'].values[0]
+	elif map_type == 'mom0':
+		spec_val = p['Mom0'].values[0]
+	elif map_type == 'mom1':
+		spec_val = p['Mom1'].values[0]
+	elif map_type == 'mom2':
+		spec_val = p['Mom2'].values[0]
+	elif map_type == 'max':
+		spec_val = p['Max'].values[0]
+	elif map_type == 'emom0':
+		spec_val = p['eMom0'].values[0]
+	elif map_type == 'emom1':
+		spec_val = p['eMom1'].values[0]
+	elif map_type == 'emom2':
+		spec_val = p['eMom2'].values[0]
+	elif map_type == 'emax':
+		spec_val = p['eMax'].values[0]
 	else:
-		spec_val = np.inf
+		spec_val = np.nan
+
+	# if np.isnan(spec_val)==True:
+	# 	spec_val = -999
 	#find the color this corresponds to in the current colormap
 	# spec_val_norm = norm(spec_val).data[0]
 	# cmap_frac = (spec_val_norm-clim[0])/(clim[1]-clim[0])*256
 	# spec_col = cmap(int(np.round(cmap_frac)))[0:3]
 	# ax.add_patch(Circle((RA_pix,Dec_pix), bmaj_pix/2, ec='k', fc=spec_col, lw=1.))
-	ax.scatter(RA_pix,Dec_pix,s=MarkerSizeBeamScale(fig,bmaj_pix/2,1.),c=spec_val,cmap=cmap,norm=norm,edgecolors='k',linewidths=1.)
+	if np.isnan(spec_val)==False:
+		ax.scatter(RA_pix,Dec_pix,s=MarkerSizeBeamScale(fig,bmaj_pix/2,1.),c=spec_val,cmap=cmap,norm=norm,edgecolors='k',linewidths=1.)
+	else:
+		ax.scatter(RA_pix,Dec_pix,s=MarkerSizeBeamScale(fig,bmaj_pix/2,1.),c='w',edgecolors='k',linewidths=1.)
 
 
 new_ymin = ylim[0]-5*bmaj_pix

@@ -18,6 +18,11 @@ from scipy.optimize import curve_fit
 from scipy.signal import medfilt2d
 from scipy.ndimage import convolve
 
+def save_to_fits(data,hdr,filepath,maptype,outsuff):
+	hdu = fits.PrimaryHDU(data=data,header=hdr)
+	hdul = fits.HDUList(hdu)
+	hdul.writeto(filepath+'_'+maptype+'_'+outsuff+'.fits',overwrite=True)
+	return
 
 def mask_out_undersampled(cube,filepath):
 	#mask out parts of the cube that were undersampled
@@ -49,22 +54,46 @@ def mask_out_undersampled(cube,filepath):
 	masked_cube.write(filepath+'_fullysampled.fits',overwrite=True)
 	return masked_cube
 
-
-
 def make_moments(cube,filepath,outsuff):
 	mom0 = cube.moment(order=0)
 	mom1 = cube.moment(order=1)
 	mom2 = cube.linewidth_fwhm()
+	mmax = cube.max(axis=0)
 	mom0.write(filepath+'_mom0_'+outsuff+'.fits',overwrite=True)
 	mom1.write(filepath+'_mom1_'+outsuff+'.fits',overwrite=True)
 	mom2.write(filepath+'_mom2_'+outsuff+'.fits',overwrite=True)
-	return mom0,mom1,mom2
+	mmax.write(filepath+'_max_'+outsuff+'.fits',overwrite=True)
+	return mom0,mom1,mom2,mmax
 
-def save_gaussfits(data,hdr,filepath,maptype,outsuff):
-	hdu = fits.PrimaryHDU(data=data,header=hdr)
-	hdul = fits.HDUList(hdu)
-	hdul.writeto(filepath+'_'+maptype+'_'+outsuff+'.fits',overwrite=True)
-	return
+def mk_rms_map(cube,mom1,mom2):
+	#make a map of the cube rms
+	vmins = mom1-2*mom2/2.355
+	vmaxs = mom1+2*mom2/2.355
+	vel_axis = cube.spectral_axis
+	cube_nosig = cube.unmasked_data[:].value
+	for i in range(vmins.shape[0]):
+		for j in range(vmins.shape[1]):
+			idx_min = np.argmin(np.abs(vmins[i,j].value-vel_axis.value))
+			idx_max = np.argmin(np.abs(vmaxs[i,j].value-vel_axis.value))
+			cube_nosig[idx_max:idx_min,i,j] = np.nan
+	rms_map = np.sqrt(np.nanmean(cube_nosig**2,axis=0))
+	return rms_map
+
+def make_emoments(mom0,mom1,mom2,mmax,rms_map,dv,filepath,outsuff):
+	e_mmax = rms_map.copy()
+	e_mom0 = dv*rms_map
+	e_mom1 = dv/mom0.value*np.sqrt(mom0.value**2+e_mom0**2+(mom1.value*rms_map)**2)
+	e_mom2 = rms_map.copy() ####WRONG
+
+	e_mmax_hdr = cube.wcs.celestial.to_header()
+	e_mmax_hdr['BUNIT'] = 'K'
+
+	save_to_fits(e_mom0,mom0.header,filepath,'emom0',outsuff)
+	save_to_fits(e_mom1,mom1.header,filepath,'emom1',outsuff)
+	save_to_fits(e_mom2,mom2.header,filepath,'emom2',outsuff)
+	save_to_fits(e_mmax,e_mmax_hdr,filepath,'emax',outsuff)
+	return e_mom0,e_mom1,e_mom2,e_mmax
+
 
 filepath = '../Data/Disk_Map/M82_CII_map'
 filepath_mom = '../Data/Disk_Map/Moments/M82_CII_map'
@@ -81,19 +110,29 @@ if args.mask_level:
 	level = args.mask_level
 else:
 	level = np.nan
-rms_full = np.sqrt(np.nanmean(cube)**2)*u.K
+rms_full = np.sqrt(np.nanmean(cube**2))*u.K
 cube_rmsignal = cube.with_mask(cube < 2*rms_full)
-rms = np.sqrt(np.nanmean(cube_rmsignal)**2)*u.K
+rms = np.sqrt(np.nanmean(cube_rmsignal**2))*u.K
 print('rms away from signal in 10 km/s channels = %.1f mK' %(rms.value*1000))
 
 
+#now limit to -100-400 km/s
+vmin = -100.*u.km/u.s
+vmax = 400.*u.km/u.s
+cube_vmask = cube.spectral_slab(vmin,vmax)
+
 if np.isnan(level) == True:
 	outsuff = 'nomask'
-	cube_masked = cube
+	cube_masked = cube_vmask
 else:
 	outsuff = 'maskSNR'+str(int(level))
-	cube_masked = cube.with_mask(cube > level*rms)
-m0m,_,_=make_moments(cube_masked,filepath_mom,outsuff)
+	cube_masked = cube_vmask.with_mask(cube_vmask > level*rms)
+mom0,mom1,mom2,mmax=make_moments(cube_masked,filepath_mom,outsuff)
+
+#now get propagated uncertainties on the moment maps based on the RMS
+rms_map = mk_rms_map(cube,mom1,mom2)
+dv = 10. #km/s
+e_mom0,e_mom1,e_mom2,e_mmax = make_emoments(mom0,mom1,mom2,mmax,rms_map,dv,filepath_mom,outsuff)
 
 
 #now make "moments" by fitting a Gaussian to each spectrum
@@ -108,7 +147,7 @@ fwhm = peak.copy()
 efwhm = peak.copy()
 
 #based on mkvelmap.m
-iy,ix = np.where(np.isnan(m0m.value)==False)
+iy,ix = np.where(np.isnan(mom0.value)==False)
 v = cube_masked.spectral_axis.value #km/s
 v_span = np.nanmax(v)-np.nanmin(v)
 dv = np.abs(cube_masked.header['CDELT3']) #km/s
@@ -138,18 +177,18 @@ for i in range(len(ix)):
 iint = peak*fwhm/2.355*np.sqrt(np.pi)
 eiint = np.sqrt((epeak*fwhm/2.355*np.sqrt(np.pi))**2+(peak*efwhm/2.355*np.sqrt(np.pi))**2)
 
-hdr = m0m.header
+hdr = mom0.header
 hdr['BUNIT']='K'
-save_gaussfits(peak,hdr,filepath_mom,'peak',outsuff)
-save_gaussfits(epeak,hdr,filepath_mom,'epeak',outsuff)
+save_to_fits(peak,hdr,filepath_mom,'peak',outsuff)
+save_to_fits(epeak,hdr,filepath_mom,'epeak',outsuff)
 hdr['BUNIT']='km/s'
-save_gaussfits(vel,hdr,filepath_mom,'vcen',outsuff)
-save_gaussfits(evel,hdr,filepath_mom,'evcen',outsuff)
-save_gaussfits(fwhm,hdr,filepath_mom,'fwhm',outsuff)
-save_gaussfits(efwhm,hdr,filepath_mom,'efwhm',outsuff)
+save_to_fits(vel,hdr,filepath_mom,'vcen',outsuff)
+save_to_fits(evel,hdr,filepath_mom,'evcen',outsuff)
+save_to_fits(fwhm,hdr,filepath_mom,'fwhm',outsuff)
+save_to_fits(efwhm,hdr,filepath_mom,'efwhm',outsuff)
 hdr['BUNIT']='K km/s'
-save_gaussfits(iint,hdr,filepath_mom,'intinten',outsuff)
-save_gaussfits(iint,hdr,filepath_mom,'eintinten',outsuff)
+save_to_fits(iint,hdr,filepath_mom,'intinten',outsuff)
+save_to_fits(iint,hdr,filepath_mom,'eintinten',outsuff)
 
 #now do some masking of the vcen field
 maxdev = 40. #km/s
@@ -178,5 +217,5 @@ for i in range(1,vel.shape[0]-1):
 # print('Replaced %d single NaN pixels with median of neighbors. %.2f%% of pixels replaced.\n' 
 # 	%(sp_count,sp_count/len(vel)))
 
-save_gaussfits(vel,hdr,filepath_mom,'vcen_cgrad',outsuff)
+save_to_fits(vel,hdr,filepath_mom,'vcen_cgrad',outsuff)
 
