@@ -1,0 +1,88 @@
+!==============================================================================
+! 	THIS SCRIPT CONVERTS THE CALIBRATED DATA OF PROJECT 08_0225
+! 	FROM ANTENNA TEMPERATURES TO MAIN BEAM TEMPERATURES DATA FOR M82.
+!
+!	Note: this project was observed during multiple flights and mixed
+!	on-off observations and on-the-flight maps in different positions. 
+!	The result of this script contains all or them irrespective of
+!	the observation mode and position. 
+!
+!	The data reduction of the two on-off positions called "Outflow_1"
+!	and "outflow_2" are done by the respective scripts named with these labels.
+!	The data reduction of the M82 on-the-flight map is done with the 
+!	script named with the string *map*.class
+!==============================================================================
+
+!==============================================================================
+! (1) EXCLUDE (PARTIALLY) EMPTY SPECTRA
+!==============================================================================
+
+file in Cycle8_GR_OT_08_0225_RLevy_Tant.great
+
+$rm -f Cycle8_GR_OT_08_0225_RLevy_Tmb_temp.great
+file out Cycle8_GR_OT_08_0225_RLevy_Tmb_temp.great s /o
+
+set unit v f
+set variable base read
+set variable cal read
+import sofia
+set var user
+set source M82*  	
+set tel *LFA*
+find /all
+
+get first
+
+define real w /like ry
+define real wsum
+
+find /all
+
+for i 1 to found
+    	get idx%num[i]
+    	let w ry
+    	let w 1.0 /where ry.ne.r%head%spe%bad
+    	compute wsum sum w /blanking r%head%spe%bad 0.  	
+	if wsum.gt.(0.75*channels) then
+   		write
+     	endif
+next
+
+
+
+!==============================================================================
+! (2) CONVERT FROM ANTENNA TEMPERATURE TO MAIN BEAM TEMPERAURE
+!==============================================================================
+
+$rm -f Cycle8_GR_OT_08_0225_RLevy_Tmb.great 
+file out Cycle8_GR_OT_08_0225_RLevy_Tmb.great s /o
+
+file in Cycle8_GR_OT_08_0225_RLevy_Tmb_temp.great 
+
+def char pixel*30[14]
+def double mainbeam[14]
+
+let pixel  SOF-LFAV_0_S SOF-LFAV_1_S SOF-LFAV_2_S SOF-LFAV_3_S SOF-LFAV_4_S SOF-LFAV_5_S SOF-LFAV_6_S  SOF-LFAH_0_S SOF-LFAH_1_S SOF-LFAH_2_S SOF-LFAH_3_S SOF-LFAH_4_S SOF-LFAH_5_S SOF-LFAH_6_S 
+
+let mainbeam 0.63 0.64 0.66 0.63 0.64 0.64 0.65 0.66 0.64 0.67 0.69 0.65 0.66 0.68
+
+set source M82*
+set tel *LFA*
+find /all
+
+for i 1 to 14
+	set tel 'pixel[i]'
+	find
+	for j 1 to found
+		get next
+		modify beam_eff mainbeam[i]
+		write
+	next
+next
+
+set tel *
+
+! Delete intermediate file (not needed anymore)
+$rm -f Cycle8_GR_OT_08_0225_RLevy_Tmb_temp.great 
+
+

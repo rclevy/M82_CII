@@ -1,0 +1,116 @@
+!===================================================================================
+! (1)   OPEN THE DATA IN MAIN BEAM TEMPERATURES, SELECT THE ON-THE-FLY OBSERVATIONS, 
+!	SMOOTH TO A 10 KM/S VELOCITY RESOLTUION AND SUBTRACT A LINEAR BASELINE
+!
+!	Note: this project was observed during multiple flights and mixed
+!	      on-off observations and on-the-flight maps. Thus the selection of 
+! 	      map observations is done by their respective scans. To see
+! 	      which scans correspond to which position and observing mode, please
+!	      check the flight logs.
+!	Note: there were two slightly different tuning frequencies during
+!	      the flights. To correct for this, a common M82 velocity of
+!	      250 km/s is assumed for all data.
+!===================================================================================
+
+file in Cycle8_GR_OT_08_0225_RLevy_Tmb.great 
+
+$rm -f Cycle8_GR_OT_08_0225_RLevy_M82_CII_map.great
+file out Cycle8_GR_OT_08_0225_RLevy_M82_CII_map.great s /o
+
+set bad and
+set format long
+set unit v f
+set weight sigma
+set source M82*
+
+set mode x -150 430
+set window 0 400
+
+!=========================================================
+
+set scan 36735 36746		! Flight HOGAN on February 19, 2021
+find /all
+
+for i 1 to found
+	get n
+	modify velo 250.0
+	smo box 26
+	smo box 10
+	base 1 
+	write
+next
+
+!=========================================================
+
+set scan 36754 36760		! Flight HAZEL on February 23, 2021
+find /all
+
+for i 1 to found
+	get n
+	modify velo 250.0
+	smo box 26
+	smo box 10
+	base 1 
+	write
+next
+
+!=========================================================
+
+set scan 37155 37162		! Flight HELEN on February 25, 2021
+find /all
+
+for i 1 to found
+	get n
+	modify velo 250.0
+	smo box 26
+	smo box 10
+	base 1 
+	write
+next
+
+!=========================================================
+
+set scan 37732 37748		! Flight HOWARD on March 10, 2021
+find /all
+
+for i 1 to found
+	get n
+	modify velo 250.0
+	smo box 26
+	smo box 10
+	base 1 
+	write
+next
+	
+set scan *
+set tel *
+
+
+
+!=====================================================
+! (2) CREATE THE DATA CUBE AND PLOT THE MAP
+!=====================================================
+
+file in Cycle8_GR_OT_08_0225_RLevy_M82_CII_map.great
+find /all
+lut rainbow3
+
+def char name*50
+let name Cycle8_GR_OT_08_0225_RLevy_M82_CII_map
+
+table 'name' new /range -60 435 v /nocheck source cal
+let map%beam 14.1
+let map%shift yes		! to derotate the map and
+let map%angle 20.0		! to align the x and y axes with RA and DEC coordinates.
+
+				! NOTE: if you don't want to rotate the map, comment the 
+				! last two lines.
+xy_map 'name' 
+let name 'name'
+let type lmv
+
+let size 230 110		! Zoom into the emission avoiding the corners of the map
+go view
+
+
+

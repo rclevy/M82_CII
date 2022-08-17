@@ -1,0 +1,113 @@
+!===========================================================================
+! (1)   OPEN THE DATA IN MAIN BEAM TEMPERATURES, SELECT THE ON-OFF OBSERVATIONS 
+!	OF THE OUTFLOW 2 POSITION, SMOOTH TO A 10 KM/S VELOCITY RESOLTUION AND 
+!	SUBTRACT A LINEAR BASELINE
+!
+!	Note: this project was observed during multiple flights and mixed
+!	      on-off observations and on-the-flight maps. Thus the selection of 
+! 	      outflow_2 observations is done by its respective scans. To see
+! 	      which scans correspond to which position and observing mode, please
+!	      check the flight logs.
+!       Note: The pixel SOF-LFAV_5_S is excluded from the data reduction
+!             due to instabilities during the flight
+!===========================================================================
+
+
+file in Cycle8_GR_OT_08_0225_RLevy_Tmb.great 
+
+$rm -f Cycle8_GR_OT_08_0225_RLevy_M82_Outflow_2_CII_temp.great
+file out Cycle8_GR_OT_08_0225_RLevy_Outflow_2_CII_temp.great s /o
+
+set format long
+set match 7
+set scan 36762 36766			! Flight HOGAN on February 19, 2021
+
+set mode x -100 400
+set window 0 380
+set weight sigma
+
+def char pixel*30[7]
+let pixel SOF-LFA*_0_S  SOF-LFA*_1_S  SOF-LFA*_2_S  SOF-LFA*_3_S  SOF-LFA*_4_S SOF-LFAH_5_S SOF-LFA*_6_S
+
+find /all
+
+for i 1 to found
+	get n
+	smooth box 26
+	smooth box 10
+	base 1 
+	write
+next
+
+
+!===========================================================================
+! (2) AVERAGE SPECTRA PER POSITION
+!     Note: to write down the rms associated to each pixel an additional
+!	    baseline of order 0 is applied after the average of the spectra
+!===========================================================================
+
+file in Cycle8_GR_OT_08_0225_RLevy_Outflow_2_CII_temp.great
+
+$rm -f Cycle8_GR_OT_08_0225_RLevy_M82_Outflow_2_CII.great
+file out Cycle8_GR_OT_08_0225_RLevy_M82_Outflow_2_CII.great s /o
+
+find /all
+
+for i 1 to 7
+	set tel 'pixel[i]'
+	find /all
+	ave /res /nocheck cal
+	base 0
+	write
+next
+
+set tel *
+
+
+!===========================================================================
+! (3) OPEN THE FINAL FILE AND CHECK THE RESULTS
+!===========================================================================
+
+file in Cycle8_GR_OT_08_0225_RLevy_M82_Outflow_2_CII.great
+find /all
+set mode y -0.12 0.2
+
+stamp
+draw text 3.3 5.5 "(+60'',-161'')"
+draw text 7.4 5.6 "rms=36 mK"
+
+draw text 11.4 5.5 "(+54'',-192'')"
+draw text 15.3 5.6 "rms=51 mK"
+
+draw text 19 5.5 "(+32'',-169'')"
+draw text 23.1 5.6 "rms=51 mK"
+
+draw text 3.4 10 "(+37'',-137'')"
+draw text 7.5 10 "rms= 39mK"
+
+draw text 11.4 10 "(+64'',-126'')"
+draw text 15.3 10 "rms= 24mK"
+
+draw text 19 10 "(+90'',-151'')"
+draw text 23.1 10 "rms= 43mK"
+
+draw text 3.4 14 "(+84'',-180'')"
+draw text 7.5 14 "rms= 24mK"
+
+set char 1
+draw text 12 13 "M82 - [CII] - Outflow 2 position"
+set char /def
+
+$rm -f Cycle8_GR_OT_08_0225_RLevy_M82_Outflow_2_CII.png
+hardcopy Cycle8_GR_OT_08_0225_RLevy_M82_Outflow_2_CII /device png color
+
+
+!===============================================
+! DELETE INTERMEDIATE FILE (not needed anymore)
+!===============================================
+
+$rm -f Cycle8_GR_OT_08_0225_RLevy_Outflow_2_CII_temp.great		
+
+
+
+
