@@ -35,9 +35,12 @@ def NHI_CII(NCp_from_TpCII,f_CNM):
 	#assumes all C singly-ionized and all H atomic
 	return NCp_from_TpCII/C_H/f_CNM
 
+def MCp_from_NCp(N_Cp,A_pix_cm2):
+	m_Cp = 1.99E-23 #g
+	Msun = 1.99E33 #g
+	return N_Cp*A_pix_cm2*m_Cp/Msun #Msun
+
 #define some fixed parameters
-m_Cp = 1.99E-23 #g
-Msun = 1.99E33 #kg
 D_pix = 14.1 #arcsec
 d = 3.63E6 #pc
 A_pix = np.pi*(D_pix/2/206265*d)**2 #pc^2
@@ -108,7 +111,7 @@ for i in range(n_pixels):
 	#sum the CII column
 	N_cii_sum = np.nansum(N_cii)
 	Nn_cii.append(N_cii_sum)
-	this_M_cii = N_cii_sum*A_pix_cm2*m_Cp/Msun #Msun
+	this_M_cii = MCp_from_NCp(N_cii_sum,A_pix_cm2) #Msun
 	Mm_cii.append(this_M_cii) #Msun
 
 	#convert the HI intensity back to a column density
@@ -179,7 +182,7 @@ plt.close('all')
 Mmm_cii = Mm_cii.copy()
 Mmm_cii[4]=0.
 Mmm_cii[5]=0.
-print('The total C+ mass is %.2e Msun' %np.nansum(Mmm_cii))
+print('The total C+ mass in the outflow is %.2e Msun' %np.nansum(Mmm_cii))
 
 tab = {'Pixel Number':pix_order_labels, 'ColumnDensity_Cp_cm2': Nn_cii, 'Mass_Cp_Msun':Mm_cii, 'med_NHI_NHICII': med_ratios, 'peak_NHI_NHICII': peak_ratios}
 df = pd.DataFrame.from_dict(tab)
