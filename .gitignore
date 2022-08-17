@@ -30,6 +30,7 @@ Data/Outflow_Pointings/HI/24as/
 Data/Outflow_Pointings/HI/outflow2*
 Data/Outflow_Pointings/HI_Moments/outflow2*
 Data/Outflow_Pointings/PACS/
+Data/Outflow_Pointings/*Outflow2*
 Data/upGREAT_Footprint_Regions/
 
 #Ignore data that's too large
