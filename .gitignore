@@ -45,3 +45,9 @@ Plots/Composite_Maps/HI_24as
 Plots/Composite_Maps/old
 Plots/Outflow_Spectra/CO_NOEMA
 Plots/Outflow_Spectra/M82_CII_Outflow*
+
+#Ignore some code
+Code/plane_decomp_edit.py
+Code/mkSHININGmap.py
+Code/mkM82Fig.py
+Code/pltM82footprints.py
