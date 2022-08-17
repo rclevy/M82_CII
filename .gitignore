@@ -10,7 +10,6 @@ __pycache__
 Obs_Docs
 
 #Ignore some stuff in Data
-Data/
 Data/Ancillary_Data/not_used/
 Data/*.fits
 Data/Cycle8_GR_OT_08_0225_RLevy_release_v2/*.fits
