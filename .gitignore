@@ -37,4 +37,10 @@ Data/Ancillary_Data/m82_hi_image_5kms_feathered_pbcor.fits
 Data/Ancillary_Data/m82_hi_image_5kms_feathered_pbcor_K.fits
 
 #Ignore some plot directories
-Plots/
+Plots/Center_Maps/Undersampled_Cube/
+Plots/Center_Maps/SHINING*
+Plots/Composite_Maps/CO_NOEMA
+Plots/Composite_Maps/HI_24as
+Plots/Composite_Maps/old
+Plots/Outflow_Spectra/CO_NOEMA
+Plots/Outflow_Spectra/M82_CII_Outflow*
