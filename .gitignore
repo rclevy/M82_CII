@@ -16,7 +16,7 @@ Data/Cycle8_GR_OT_08_0225_RLevy_release_v2/*.fits
 Data/Cycle8_GR_OT_08_0225_RLevy_release_v2/*.pdf
 Data/Cycle8_GR_OT_08_0225_RLevy_release_v2/*.png
 Data/Cycle8_GR_OT_08_0225_RLevy_release_v2/*.dat
-Data/Disk_Map/Moments_undersampled/
+Data/Disk_Map/Moments_undersampledcube/
 Data/Outflow_Pointings/CII/outflow2*
 Data/Outflow_Pointings/CII_Moments/outflow2*
 Data/Outflow_Pointings/CII/M82_CII_outflow_stacked.fits
@@ -30,3 +30,12 @@ Data/Outflow_Pointings/HI/outflow2*
 Data/Outflow_Pointings/HI_Moments/outflow2*
 Data/Outflow_Pointings/PACS/
 Data/upGREAT_Footprint_Regions/
+
+#Ignore data that's too large
+Data/Ancillary_Data/M82-NOEMA-30m-mask-merged.clean.fits
+Data/Ancillary_Data/M82-NOEMA-30m-mask-merged.clean_smoothedCII.fits
+Data/Ancillary_Data/m82_hi_image_5kms_feathered_pbcor.fits
+Data/Ancillary_Data/m82_hi_image_5kms_feathered_pbcor_K.fits
+
+#Ignore some plot directories
+Plots/
