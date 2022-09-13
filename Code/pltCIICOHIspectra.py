@@ -145,9 +145,9 @@ for i in range(n_pointings):
 		ax.text(0.025,0.7,'HI/%i' %(1/hi_sf),color=hi_color,fontsize=plt.rcParams['font.size']-3,ha='left',va='top',transform=ax.transAxes)
 
 		# if j == n_pixels-1:
-		if j == 0:
+		if j == 1:
 			leg = plt.legend([(c0,c1),c2,c3],[c1.get_label(),c2.get_label(),c3.get_label()],
-				handlelength=1.25,fontsize=plt.rcParams['font.size']-2,loc='center left',bbox_to_anchor=(-0.6,0.65,0.2,0.2))
+				handlelength=1.25,fontsize=plt.rcParams['font.size']-2,loc='center left',bbox_to_anchor=(1.025,0.65,0.2,0.2))
 
 
 		ax.set_xlim(-150,450)
@@ -157,12 +157,14 @@ for i in range(n_pointings):
 			ax.set_ylim(-0.25,0.5)
 		ax.minorticks_on()
 
-		if j !=5:
-			ax.xaxis.set_ticklabels([])
-			ax.yaxis.set_ticklabels([])
-		else:
+		if j==5:
 			ax.set_xlabel('V$_{\mathrm{LSRK}}$ (km s$^{-1}$)')
+		elif j==0:
 			ax.set_ylabel('T$_{\mathrm{mb}}$ (K)')
+		elif (j==1) | (j==3) | (j==4) | (j==6):
+			ax.yaxis.set_ticklabels([])
+			
+			
 	plt.savefig('../Plots/Outflow_Spectra/M82_CII_CO_HI_Outflow'+str(i+1)+'.pdf',bbox_inches='tight',metadata={'Creator':this_script})
 
 	#save CO and HI scale factors

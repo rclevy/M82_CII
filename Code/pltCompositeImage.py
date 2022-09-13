@@ -92,19 +92,19 @@ cbreak=0.0998 #default ds9 scaling
 #norm=ImageNormalize(co,stretch=LogStretch(),interval=ManualInterval(vmax=vmax,vmin=vmin))
 norm_co=ImageNormalize(co,stretch=AsinhStretch(cbreak),interval=ManualInterval(vmax=vmax_co,vmin=vmin_co))
 cmap_co = cm.get_cmap('gist_yarg')
-levels_co = np.logspace(np.log10(0.15),np.log10(vmax_co),10)
+levels_co = np.logspace(np.log10(0.12),np.log10(vmax_co),10)
 # co[:,0:300]=np.nan
 # co[:,1750:]=np.nan
 # co[0:250,:]=np.nan
 # co[1000:,:]=np.nan
 
 #open the continuum image
-fname_cont = '../Data/Ancillary_Data/m82_sma_cont.fits'
-cont = fits.open(fname_cont)
-hdr_cont = cont[0].header
-wcs_cont = WCS(hdr_cont)
-cont = cont[0].data
-levels_cont = np.linspace(-0.00353959,0.0236673,num=4)
+# fname_cont = '../Data/Ancillary_Data/m82_sma_cont.fits'
+# cont = fits.open(fname_cont)
+# hdr_cont = cont[0].header
+# wcs_cont = WCS(hdr_cont)
+# cont = cont[0].data
+# levels_cont = np.linspace(-0.00353959,0.0236673,num=4)
 
 #open the HI
 fname_hi = '../Data/Ancillary_Data/m82_hi_image_5kms_feathered_pbcor_mom0.fits'
@@ -222,7 +222,7 @@ fig = plt.figure(1,figsize=(14,10))
 plt.clf()
 ax = plt.subplot(projection=wcs_hi)
 im=ax.imshow(hi,origin='lower',cmap=hmap,vmin=vmin_hi,vmax=vmax_hi*1.25)
-ax.contourf(co,levels=levels_co,origin='lower',cmap=cmap_co,alpha=0.8,transform=ax.get_transform(wcs_co),extend='max')
+ax.contourf(co,levels=levels_co,origin='lower',cmap=cmap_co,alpha=0.6,transform=ax.get_transform(wcs_co),extend='max')
 #ax.contour(cii,origin='lower',levels=levels_cii,colors='w',linewidths=2.5,transform=ax.get_transform(wcs_cii))
 ax.contour(cii,origin='lower',levels=levels_cii,cmap=cmap_cii,linewidths=1.5,transform=ax.get_transform(wcs_cii))
 ax.set_xlim(xlimo)

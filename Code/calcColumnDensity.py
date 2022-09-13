@@ -155,12 +155,14 @@ for i in range(n_pixels):
 
 	ax.text(0.05,0.95,pix_order_labels[i],ha='center',va='top',transform=ax.transAxes)
 	#ax.text(0.95,0.95,'$\\frac{N_\mathrm{HI}}{N_\mathrm{HI}^\mathrm{[CII]}} = %.1f$' %med_ratio_N_hi_cii,ha='right',va='top',fontsize=plt.rcParams['font.size']-4,transform=ax.transAxes)
-	ax.text(0.975,0.975,'med($N_{\mathrm{HI}}/N_{\mathrm{HI}}^{\mathrm{[CII]}}$)=%.1f\nmax($N_{\mathrm{HI}}$)/max($N_{\mathrm{HI}}^{\mathrm{[CII]}}$)=%.1f' %(med_ratio_N_hi_cii,peak_ratio),
+	# ax.text(0.975,0.975,'med($N_{\mathrm{HI}}/N_{\mathrm{HI}}^{\mathrm{[CII]}}$)=%.1f\nmax($N_{\mathrm{HI}}$)/max($N_{\mathrm{HI}}^{\mathrm{[CII]}}$)=%.1f' %(med_ratio_N_hi_cii,peak_ratio),
+	# 	ha='right',va='top',fontsize=plt.rcParams['font.size']-8,transform=ax.transAxes)
+	ax.text(0.975,0.975,'max($N_{\mathrm{HI}}$)/max($N_{\mathrm{HI}}^{\mathrm{[CII]}}$)=%.1f' %(peak_ratio),
 		ha='right',va='top',fontsize=plt.rcParams['font.size']-8,transform=ax.transAxes)
 
-	if i == 0:
+	if i == 1:
 		leg = plt.legend([(c0,c1),(c2,c3)],[c1.get_label(),c3.get_label()],
-			handlelength=1.25,fontsize=plt.rcParams['font.size']-2,loc='center left',bbox_to_anchor=(-0.6,0.65,0.2,0.2))
+			handlelength=1.25,fontsize=plt.rcParams['font.size']-2,loc='center left',bbox_to_anchor=(1.025,0.65,0.2,0.2))
 
 
 	ax.set_xlim(-150,450)
@@ -170,12 +172,14 @@ for i in range(n_pixels):
 	ax.grid(which='major',axis='y',alpha=0.5)
 
 
-	if i !=5:
-		ax.xaxis.set_ticklabels([])
-		ax.yaxis.set_ticklabels([])
-	else:
+	if i==5:
 		ax.set_xlabel('V$_{\mathrm{LSRK}}$ (km s$^{-1}$)')
+		#ax.set_ylabel('N$_{\mathrm{HI}}$ ($\\times10^{21}$ cm$^{-2}$)')
+	elif (i==0):
 		ax.set_ylabel('N$_{\mathrm{HI}}$ ($\\times10^{21}$ cm$^{-2}$)')
+	elif (i==1) | (i==3) | (i==4) | (i==6):
+		#ax.xaxis.set_ticklabels([])
+		ax.yaxis.set_ticklabels([])
 plt.savefig('../Plots/Outflow_Spectra/M82_ColumnDensity_CII_HI_Outflow1.pdf',bbox_inches='tight',metadata={'Creator':this_script})
 plt.close('all')
 
