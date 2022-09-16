@@ -16,7 +16,7 @@ import matplotlib.gridspec as gridspec
 import upGREATUtils
 import pandas as pd
 from reproject import reproject_interp
-from photutils.aperture import SkyCircularAperture,aperture_photometry
+from photutils.aperture import SkyCircularAperture,aperture_photometry,SkyRectangularAperture
 plt.rcParams['font.family']='serif'
 plt.rcParams['mathtext.rm'] = 'serif'
 plt.rcParams['mathtext.fontset'] = 'cm'
@@ -31,7 +31,7 @@ plt.rcParams['font.size'] = 36
 # 		out = r'${} \times 10^{{{}}}$'.format(a, b)
 # 	return out
 
-nu = 1.900537*1E15 #Hz
+nu = 1.900537*1E12 #Hz
 
 def pacs_Jy2K(im_Jypix,hdr):
 	#convert from Jy/pixel to Jy/beam
@@ -69,7 +69,7 @@ def sofia_K2Jy(Tmb,hdr):
 	# Ta = Tr*eta_fss
 	# S_Jypix = 971.*Ta #Jy/pixel
 	# S_Jybeam = S_Jypix*beam_area/pix_area
-	S_Jybeam = Tr*nu**2*bmaj*bmin/1.222E6
+	S_Jybeam = Tmb*nu**2*bmaj*bmin/1.222E6
 	S_Jypix = S_Jybeam/beam_area*pix_area
 	return S_Jybeam,Tr,S_Jypix
 
@@ -131,18 +131,18 @@ _,pacs_mom0_repro_RJ_Kkms,pacs_mom0_repro_mb_Kkms = pacs_Jy2K(pacs_mom0_repro_Jy
 pacs_flux_repro_Wm2pix = Jykms2Wm2(pacs_mom0_repro_Jypix,nu)
 
 
-#open the SHINING map
-shining_flux = fits.open('../Data/Ancillary_Data/SHINING_M82_CII_14asGaussPSF.fits')
-shining_flux_hdr = shining_flux[0].header
-shining_flux_wcs = WCS(shining_flux_hdr)
-shining_flux_Wm2pix = shining_flux[0].data
-shining_flux_repro_Wm2pix,_ = reproject_interp(shining_flux,sofia_mom0_hdr)
+# #open the SHINING map
+# shining_flux = fits.open('../Data/Ancillary_Data/SHINING_M82_CII_14asGaussPSF.fits')
+# shining_flux_hdr = shining_flux[0].header
+# shining_flux_wcs = WCS(shining_flux_hdr)
+# shining_flux_Wm2pix = shining_flux[0].data
+# shining_flux_repro_Wm2pix,_ = reproject_interp(shining_flux,sofia_mom0_hdr)
 
 
 #get the ratio between the flux maps
 ratio_GP_Wm2pix = sofia_flux_Wm2pix/pacs_flux_repro_Wm2pix
-ratio_GS_Wm2pix = sofia_flux_Wm2pix/shining_flux_repro_Wm2pix
-ratio_SP_Wm2pix = shining_flux_repro_Wm2pix/pacs_flux_repro_Wm2pix
+# ratio_GS_Wm2pix = sofia_flux_Wm2pix/shining_flux_repro_Wm2pix
+# ratio_SP_Wm2pix = shining_flux_repro_Wm2pix/pacs_flux_repro_Wm2pix
 
 
 # #get percent difference between maxima
@@ -198,27 +198,27 @@ cmap = ListedColormap(sns.cubehelix_palette(start=0.6,rot=-0.65,light=0.9,dark=0
 # plt.savefig('../Plots/Center_Maps/SOFIA_PACS_peak.pdf',bbox_inches='tight',metadata={'Creator':this_script})
 # plt.close()
 
-#compare the SHINING and PACS maps
-fig = plt.figure(1,figsize=(14,10))
-plt.clf()
-ax = plt.subplot(projection=pacs_mom0_wcs)
-im=ax.imshow(ratio_SP_Wm2pix,origin='lower',vmin=0,vmax=4,cmap='Spectral_r',transform=ax.get_transform(sofia_mom0_wcs))
-ax.set_xlim(xlim)
-ax.set_ylim(ylim)
-cb = plt.colorbar(im)
-cb.set_label('F$_{\mathrm{SHINING}}$/F$_{\mathrm{PACS}}$')
-cb.ax.plot([0,50],[1,1],color='gray',lw=2)
-ax.coords[0].set_major_formatter('hh:mm:ss.s')
-ax.coords[0].set_separator(('$^{\mathrm{h}}$','$^{\mathrm{m}}$','$^{\mathrm{s}}$'))
-ax.coords[0].display_minor_ticks(True)
-ax.coords[1].display_minor_ticks(True)
-ax.coords[0].set_minor_frequency(4)
-ax.coords[1].set_minor_frequency(4)
-ax.coords[0].set_ticklabel(exclude_overlapping=True)
-plt.xlabel('R.A. (J2000)')
-plt.ylabel('Decl. (J2000)',labelpad=-1)
-plt.savefig('../Plots/Center_Maps/SHINING_PACS_flux_ratio.pdf',bbox_inches='tight',metadata={'Creator':this_script})
-plt.close()
+# #compare the SHINING and PACS maps
+# fig = plt.figure(1,figsize=(14,10))
+# plt.clf()
+# ax = plt.subplot(projection=pacs_mom0_wcs)
+# im=ax.imshow(ratio_SP_Wm2pix,origin='lower',vmin=0,vmax=4,cmap='Spectral_r',transform=ax.get_transform(sofia_mom0_wcs))
+# ax.set_xlim(xlim)
+# ax.set_ylim(ylim)
+# cb = plt.colorbar(im)
+# cb.set_label('F$_{\mathrm{SHINING}}$/F$_{\mathrm{PACS}}$')
+# cb.ax.plot([0,50],[1,1],color='gray',lw=2)
+# ax.coords[0].set_major_formatter('hh:mm:ss.s')
+# ax.coords[0].set_separator(('$^{\mathrm{h}}$','$^{\mathrm{m}}$','$^{\mathrm{s}}$'))
+# ax.coords[0].display_minor_ticks(True)
+# ax.coords[1].display_minor_ticks(True)
+# ax.coords[0].set_minor_frequency(4)
+# ax.coords[1].set_minor_frequency(4)
+# ax.coords[0].set_ticklabel(exclude_overlapping=True)
+# plt.xlabel('R.A. (J2000)')
+# plt.ylabel('Decl. (J2000)',labelpad=-1)
+# plt.savefig('../Plots/Center_Maps/SHINING_PACS_flux_ratio.pdf',bbox_inches='tight',metadata={'Creator':this_script})
+# plt.close()
 
 
 #plot the upgreat and PACS flux maps
@@ -229,7 +229,7 @@ im=ax.imshow(sofia_flux_Wm2pix/1E-12,origin='lower',vmin=0,vmax=7,cmap=cmap,tran
 ax.set_xlim(xlim)
 ax.set_ylim(ylim)
 cb = plt.colorbar(im)
-cb.set_label('F$_{\mathrm{upGREAT}}$ ($\\times10^{-12}$ W m$^{-2})$')
+cb.set_label('F$_{\mathrm{upGREAT}}$ ($\\times10^{-12}$ W m$^{-2}$ pixel$^{-1}$)')
 ax.coords[0].set_major_formatter('hh:mm:ss.s')
 ax.coords[0].set_separator(('$^{\mathrm{h}}$','$^{\mathrm{m}}$','$^{\mathrm{s}}$'))
 ax.coords[0].display_minor_ticks(True)
@@ -250,7 +250,7 @@ im=ax.imshow(pacs_flux_Wm2pix/1E-13,origin='lower',vmin=0,vmax=3,cmap=cmap)
 ax.set_xlim(xlim)
 ax.set_ylim(ylim)
 cb = plt.colorbar(im,ticks=[0,1,2,3])
-cb.set_label('F$_{\mathrm{PACS}}$ ($\\times10^{-13}$ W m$^{-2})$')
+cb.set_label('F$_{\mathrm{PACS}}$ ($\\times10^{-13}$ W m$^{-2}$ pixel$^{-1}$)')
 ax.coords[0].set_major_formatter('hh:mm:ss.s')
 ax.coords[0].set_separator(('$^{\mathrm{h}}$','$^{\mathrm{m}}$','$^{\mathrm{s}}$'))
 ax.coords[0].display_minor_ticks(True)
@@ -271,7 +271,7 @@ im=ax.imshow(pacs_flux_repro_Wm2pix/1E-12,origin='lower',vmin=0,vmax=4,cmap=cmap
 ax.set_xlim(xlim)
 ax.set_ylim(ylim)
 cb = plt.colorbar(im,ticks=[0,1,2,3,4])
-cb.set_label('F$_{\mathrm{PACS}}$ ($\\times10^{-12}$ W m$^{-2})$')
+cb.set_label('F$_{\mathrm{PACS}}$ ($\\times10^{-12}$ W m$^{-2}$ pixel$^{-1}$)')
 ax.coords[0].set_major_formatter('hh:mm:ss.s')
 ax.coords[0].set_separator(('$^{\mathrm{h}}$','$^{\mathrm{m}}$','$^{\mathrm{s}}$'))
 ax.coords[0].display_minor_ticks(True)
@@ -289,7 +289,7 @@ plt.close()
 fig = plt.figure(1,figsize=(14,10))
 plt.clf()
 ax = plt.subplot(projection=pacs_mom0_wcs)
-im=ax.imshow(ratio_GP_Wm2pix,origin='lower',vmin=0,vmax=4,cmap='Spectral_r',transform=ax.get_transform(sofia_mom0_wcs))
+im=ax.imshow(ratio_GP_Wm2pix,origin='lower',vmin=0,vmax=3,cmap='Spectral_r',transform=ax.get_transform(sofia_mom0_wcs))
 ax.set_xlim(xlim)
 ax.set_ylim(ylim)
 cb = plt.colorbar(im)
@@ -313,6 +313,35 @@ med_ratio = np.nanmedian(ratio_GP_Wm2pix)
 std_ratio = np.nanstd(ratio_GP_Wm2pix)
 print('F_upGREAT/F_PACS: Ave = %.1f, Med = %.1f, Stdev = %.1f' %(ave_ratio,med_ratio,std_ratio))
 
+
+
+#### CHECK INTEGRATED QUANTITIES
+center = SkyCoord('9h55m52.22s','+69d40m46.9s')
+#start with 47"x47" region
+#open the original (continuum subtracted) PACS mom0 map
+pacs_mom0_Jypixkms = fits.open('../Data/Ancillary_Data/Herschel_PACS_158um_intinten_contsub.fits') 
+pacs_mom0_hdr = pacs_mom0_Jypixkms[0].header
+pacs_mom0_wcs = WCS(pacs_mom0_hdr)
+pacs_mom0_Jypixkms = pacs_mom0_Jypixkms[0].data
+#crop to 47"x47"
+aper_47as = SkyRectangularAperture(center,47*u.arcsec,47*u.arcsec,theta=96.25238954968728*u.deg)
+pacs_mom0_Jypixkms_47as = aper_47as.to_pixel(pacs_mom0_wcs).to_mask(method='center').multiply(pacs_mom0_Jypixkms)
+pacs_flux_Jypixkms_47as = np.nansum(pacs_mom0_Jypixkms_47as)
+print('HC18 PACS flux in 47"x47" = %.2e Jy/pix km/s' %(2.27E6))
+print('Original PACS flux in 47"x47" = %.2e Jy/pix km/s' %pacs_flux_Jypixkms_47as)
+#now open the convolved PACS mom0 map
+pacs_mom0_conv_Jypixkms = pacs_mom0_repro_Jypix.copy()
+pacs_mom0_conv_wcs = sofia_mom0_wcs.copy()
+#crop to 47"x47"
+pacs_mom0_conv_Jypixkms_47as = aper_47as.to_pixel(pacs_mom0_conv_wcs).to_mask(method='center').multiply(pacs_mom0_conv_Jypixkms)
+pacs_flux_conv_Jypixkms_47as = np.nansum(pacs_mom0_conv_Jypixkms_47as)
+print('Conv+regrid PACS flux in 47"x47" = %.2e Jy/pix km/s' %pacs_flux_conv_Jypixkms_47as)
+#repeat for upGREAT (this cube is already continuum subtracted)
+sofia_mom0_Jypixkms = sofia_mom0_Jypix.copy()
+#crop to 47"x47"
+sofia_mom0_Jypixkms_47as = aper_47as.to_pixel(sofia_mom0_wcs).to_mask(method='center').multiply(sofia_mom0_Jypixkms)
+sofia_flux_Jypixkms_47as = np.nansum(sofia_mom0_Jypixkms_47as)
+print('upGREAT flux in 47"x47" = %.2e Jy/pix km/s' %sofia_flux_Jypixkms_47as)
 
 
 # fig = plt.figure(1,figsize=(14,10))

@@ -40,6 +40,7 @@ Data/Ancillary_Data/m82_hi_image_5kms_feathered_pbcor_K.fits
 #Ignore some plot directories
 Plots/Center_Maps/Undersampled_Cube/
 Plots/Center_Maps/SHINING*
+Plots/Center_Maps/RotationCurve/
 Plots/Composite_Maps/CO_NOEMA
 Plots/Composite_Maps/HI_24as
 Plots/Composite_Maps/old

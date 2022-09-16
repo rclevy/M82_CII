@@ -14,5 +14,6 @@ os.system('python pltCIImap.py "mom1" --mask_level 2 --clim 85 335') #symmetric 
 os.system('python pltCIImap.py "mom2" --mask_level 2 --clim 0 175')
 os.system('python pltCompositeImage.py')
 os.system('python convolvePACS2upGREAT.py')
-os.system('python compareHerschel.py')
+os.system('python compareLitFluxes.py')
 os.system('python calcCIIPropertiesDisk.py')
+os.system('python pltCIICOspectradisk.py')

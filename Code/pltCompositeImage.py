@@ -188,6 +188,7 @@ sb_pc_text = str(int(sb_pc))+' pc'
 
 
 center = SkyCoord('9h55m52.7250s','+69d40m45.780s')
+center_wcs_hi = wcs_hi.all_world2pix(center.ra.value,center.dec.value,1,ra_dec_order=True)
 sp_offset = (29.152,-80.093) #arcsec
 center_sp = SkyCoord(center.ra+sp_offset[0]*u.arcsec,center.dec+sp_offset[1]*u.arcsec)
 array_rot = 70. #deg
@@ -253,6 +254,7 @@ b1.set_path_effects([pe.Stroke(linewidth=4.0, foreground='w'),pe.Normal()])
 b3.set_path_effects([pe.Stroke(linewidth=3.0, foreground='w'),pe.Normal()])
 s1,=ax.plot([x_text_sb,x_text_sb+sb_pc_pix],[y_text-bmaj_cii/arcsec2pix,y_text-bmaj_cii/arcsec2pix],'-',color='w',lw=3)
 s2=ax.text(np.mean([x_text_sb,x_text_sb+sb_pc_pix]),(y_text-bmaj_cii/arcsec2pix)*1.001,sb_pc_text,color='w',ha='center',va='bottom')
+c, = ax.plot(center_wcs_hi[0],center_wcs_hi[1],'wx',markersize=10,mew=3.)
 plt.savefig('../Plots/Composite_Maps/M82_HI_CO_CII.pdf',dpi=300,metadata={'Creator':this_script})
 
 lw = 2.5
@@ -286,6 +288,7 @@ b2.remove()
 b3.remove()
 s1.remove()
 s2.remove()
+c.remove()
 for c in c1.collections:
 	c.remove()
 for c in c0.collections:

@@ -100,7 +100,8 @@ filepath_mom = '../Data/Disk_Map/Moments/M82_CII_map'
 
 #load the cube
 cube = SpectralCube.read(filepath+'_cube.fits').with_spectral_unit(u.km/u.s)*u.K
-
+hdr = cube.header
+wcs = cube.wcs
 
 #mask to the fully sampled region
 cube = mask_out_undersampled(cube,filepath)
@@ -115,6 +116,9 @@ cube_rmsignal = cube.with_mask(cube < 2*rms_full)
 rms = np.sqrt(np.nanmean(cube_rmsignal**2))*u.K
 print('rms away from signal in 10 km/s channels = %.1f mK' %(rms.value*1000))
 
+#shift the cube by 1 pixel along the major axis
+cube = np.roll(cube,-1,axis=2)
+cube = SpectralCube(data=cube*u.K,wcs=wcs,header=hdr)
 
 #now limit to -100-400 km/s
 vmin = -100.*u.km/u.s
@@ -135,87 +139,87 @@ dv = 10. #km/s
 e_mom0,e_mom1,e_mom2,e_mmax = make_emoments(mom0,mom1,mom2,mmax,rms_map,dv,filepath_mom,outsuff)
 
 
-#now make "moments" by fitting a Gaussian to each spectrum
-def gauss(x,a,b,c):
-	return a*np.exp(-(x-b)**2/(2*c**2))
+# #now make "moments" by fitting a Gaussian to each spectrum
+# def gauss(x,a,b,c):
+# 	return a*np.exp(-(x-b)**2/(2*c**2))
 
-peak = np.nan*np.ones((cube.shape[1],cube.shape[2]))
-epeak = peak.copy()
-vel = peak.copy()
-evel = peak.copy()
-fwhm = peak.copy()
-efwhm = peak.copy()
+# peak = np.nan*np.ones((cube.shape[1],cube.shape[2]))
+# epeak = peak.copy()
+# vel = peak.copy()
+# evel = peak.copy()
+# fwhm = peak.copy()
+# efwhm = peak.copy()
 
-#based on mkvelmap.m
-iy,ix = np.where(np.isnan(mom0.value)==False)
-v = cube_masked.spectral_axis.value #km/s
-v_span = np.nanmax(v)-np.nanmin(v)
-dv = np.abs(cube_masked.header['CDELT3']) #km/s
+# #based on mkvelmap.m
+# iy,ix = np.where(np.isnan(mom0.value)==False)
+# v = cube_masked.spectral_axis.value #km/s
+# v_span = np.nanmax(v)-np.nanmin(v)
+# dv = np.abs(cube_masked.header['CDELT3']) #km/s
 
-for i in range(len(ix)):
-	s = cube_masked[:,iy[i],ix[i]].value
-	s[np.isnan(s)==True]=0.
-	try:
-		p,pcov = curve_fit(gauss,v,s,
-			p0=(np.nanmax(s),np.mean([np.nanmax(v),np.nanmin(v)]),5*dv),
-			bounds=([0,np.nanmin(v),dv],[np.inf,np.nanmax(v),v_span/2]))
-		ep = np.sqrt(np.diag(pcov))
-	except RuntimeError:
-		p = np.array([np.nan, np.nan, np.nan])
-		ep = np.array([np.nan, np.nan, np.nan])
-
-
-	peak[iy[i],ix[i]] = p[0]
-	vel[iy[i],ix[i]] = p[1]
-	fwhm[iy[i],ix[i]] = p[2]*2.355
-	epeak[iy[i],ix[i]] = ep[0]
-	evel[iy[i],ix[i]] = ep[1]
-	efwhm[iy[i],ix[i]] = ep[2]*2.355
+# for i in range(len(ix)):
+# 	s = cube_masked[:,iy[i],ix[i]].value
+# 	s[np.isnan(s)==True]=0.
+# 	try:
+# 		p,pcov = curve_fit(gauss,v,s,
+# 			p0=(np.nanmax(s),np.mean([np.nanmax(v),np.nanmin(v)]),5*dv),
+# 			bounds=([0,np.nanmin(v),dv],[np.inf,np.nanmax(v),v_span/2]))
+# 		ep = np.sqrt(np.diag(pcov))
+# 	except RuntimeError:
+# 		p = np.array([np.nan, np.nan, np.nan])
+# 		ep = np.array([np.nan, np.nan, np.nan])
 
 
-#get integrated intensity based on Gaussian fits
-iint = peak*fwhm/2.355*np.sqrt(np.pi)
-eiint = np.sqrt((epeak*fwhm/2.355*np.sqrt(np.pi))**2+(peak*efwhm/2.355*np.sqrt(np.pi))**2)
+# 	peak[iy[i],ix[i]] = p[0]
+# 	vel[iy[i],ix[i]] = p[1]
+# 	fwhm[iy[i],ix[i]] = p[2]*2.355
+# 	epeak[iy[i],ix[i]] = ep[0]
+# 	evel[iy[i],ix[i]] = ep[1]
+# 	efwhm[iy[i],ix[i]] = ep[2]*2.355
 
-hdr = mom0.header
-hdr['BUNIT']='K'
-save_to_fits(peak,hdr,filepath_mom,'peak',outsuff)
-save_to_fits(epeak,hdr,filepath_mom,'epeak',outsuff)
-hdr['BUNIT']='km/s'
-save_to_fits(vel,hdr,filepath_mom,'vcen',outsuff)
-save_to_fits(evel,hdr,filepath_mom,'evcen',outsuff)
-save_to_fits(fwhm,hdr,filepath_mom,'fwhm',outsuff)
-save_to_fits(efwhm,hdr,filepath_mom,'efwhm',outsuff)
-hdr['BUNIT']='K km/s'
-save_to_fits(iint,hdr,filepath_mom,'intinten',outsuff)
-save_to_fits(iint,hdr,filepath_mom,'eintinten',outsuff)
 
-#now do some masking of the vcen field
-maxdev = 40. #km/s
-fm5 = medfilt2d(vel,[5,5])
-fm3 = medfilt2d(vel,[3,3])
-um = np.ones(vel.shape)
-um[np.isnan(vel)==True]=0.
-pc5 = convolve(um,np.ones((5,5)),mode='nearest') # count how many neighbors a pixel has that are not NaN
-ix3 = np.where((pc5<25) & (pc5>=9) & (np.abs(fm3-vel)>maxdev))
-ix5 = np.where((pc5==25) & (np.abs(fm5-vel)>maxdev))
-vel[ix3] = fm3[ix3] # filter out things sticking out in the unsharp masking
-vel[ix5] = fm5[ix5] # filter out things sticking out in the unsharp masking
-#print('Replaced %d for 3x3 median and %d for 5x5 median. %.2f%% of pixels replaced.\n'
-#	%(len(ix3[0]),len(ix5[0]),(len(ix3[0])+len(ix5[0]))/len(vel[0])))
+# #get integrated intensity based on Gaussian fits
+# iint = peak*fwhm/2.355*np.sqrt(np.pi)
+# eiint = np.sqrt((epeak*fwhm/2.355*np.sqrt(np.pi))**2+(peak*efwhm/2.355*np.sqrt(np.pi))**2)
 
-#replace single NaN pixels with the median of its neighbors
-nneigh = 1
-sp_count = 0
-for i in range(1,vel.shape[0]-1):
-	for j in range(1,vel.shape[1]-1):
-		if np.isnan(vel[i,j])==True:
-			neighbors = np.append(np.append(np.append(vel[i-nneigh,j-nneigh:j+nneigh+1],vel[i+nneigh,j-nneigh:j+nneigh+1]),vel[i,j+nneigh]),vel[i,j-nneigh])
-			vel[i,j]=np.median(neighbors)
-			if np.isnan(vel[i,j])==False:
-				sp_count+=1
-# print('Replaced %d single NaN pixels with median of neighbors. %.2f%% of pixels replaced.\n' 
-# 	%(sp_count,sp_count/len(vel)))
+# hdr = mom0.header
+# hdr['BUNIT']='K'
+# save_to_fits(peak,hdr,filepath_mom,'peak',outsuff)
+# save_to_fits(epeak,hdr,filepath_mom,'epeak',outsuff)
+# hdr['BUNIT']='km/s'
+# save_to_fits(vel,hdr,filepath_mom,'vcen',outsuff)
+# save_to_fits(evel,hdr,filepath_mom,'evcen',outsuff)
+# save_to_fits(fwhm,hdr,filepath_mom,'fwhm',outsuff)
+# save_to_fits(efwhm,hdr,filepath_mom,'efwhm',outsuff)
+# hdr['BUNIT']='K km/s'
+# save_to_fits(iint,hdr,filepath_mom,'intinten',outsuff)
+# save_to_fits(iint,hdr,filepath_mom,'eintinten',outsuff)
 
-save_to_fits(vel,hdr,filepath_mom,'vcen_cgrad',outsuff)
+# #now do some masking of the vcen field
+# maxdev = 40. #km/s
+# fm5 = medfilt2d(vel,[5,5])
+# fm3 = medfilt2d(vel,[3,3])
+# um = np.ones(vel.shape)
+# um[np.isnan(vel)==True]=0.
+# pc5 = convolve(um,np.ones((5,5)),mode='nearest') # count how many neighbors a pixel has that are not NaN
+# ix3 = np.where((pc5<25) & (pc5>=9) & (np.abs(fm3-vel)>maxdev))
+# ix5 = np.where((pc5==25) & (np.abs(fm5-vel)>maxdev))
+# vel[ix3] = fm3[ix3] # filter out things sticking out in the unsharp masking
+# vel[ix5] = fm5[ix5] # filter out things sticking out in the unsharp masking
+# #print('Replaced %d for 3x3 median and %d for 5x5 median. %.2f%% of pixels replaced.\n'
+# #	%(len(ix3[0]),len(ix5[0]),(len(ix3[0])+len(ix5[0]))/len(vel[0])))
+
+# #replace single NaN pixels with the median of its neighbors
+# nneigh = 1
+# sp_count = 0
+# for i in range(1,vel.shape[0]-1):
+# 	for j in range(1,vel.shape[1]-1):
+# 		if np.isnan(vel[i,j])==True:
+# 			neighbors = np.append(np.append(np.append(vel[i-nneigh,j-nneigh:j+nneigh+1],vel[i+nneigh,j-nneigh:j+nneigh+1]),vel[i,j+nneigh]),vel[i,j-nneigh])
+# 			vel[i,j]=np.median(neighbors)
+# 			if np.isnan(vel[i,j])==False:
+# 				sp_count+=1
+# # print('Replaced %d single NaN pixels with median of neighbors. %.2f%% of pixels replaced.\n' 
+# # 	%(sp_count,sp_count/len(vel)))
+
+# save_to_fits(vel,hdr,filepath_mom,'vcen_cgrad',outsuff)
 

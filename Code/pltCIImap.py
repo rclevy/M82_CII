@@ -84,9 +84,9 @@ if args.cmap:
 	cmap = cm.get_cmap(args.cmap)
 else:
 	if (map_type == 'mom0') or (map_type == 'intinten'):
-		cmap = ListedColormap(sns.cubehelix_palette(start=0.6,rot=-0.65,light=0.9,dark=0.2,n_colors=256,reverse=True))
+		cmap = ListedColormap(sns.cubehelix_palette(start=0.6,rot=-0.65,light=0.95,dark=0.2,n_colors=256,reverse=True))
 	elif (map_type == 'peak') or (map_type == 'epeak') or (map_type == 'max'):
-		cmap = ListedColormap(sns.cubehelix_palette(start=1.1,rot=-0.65,light=0.9,dark=0.2,n_colors=256,reverse=True))
+		cmap = ListedColormap(sns.cubehelix_palette(start=1.1,rot=-0.65,light=0.95,dark=0.2,n_colors=256,reverse=True))
 
 	elif (map_type == 'fwhm') or (map_type == 'efwhm') or (map_type == 'mom2'):
 		cmap = 'viridis'
@@ -143,9 +143,12 @@ else:
 
 
 #open the CO data to use its wcs
-hdr_co = fits.open('../Data/Ancillary_Data/M82.CO.NOEMA+30m.peak.fits')[0].header
+hdr_co = fits.open('../Data/Ancillary_Data/M82.CO.30m.IRAM_reprocessed_peak.fits')[0].header
 wcs_co = WCS(hdr_co)
 arcsec2pix = hdr_co['CDELT2']*3600
+
+center = SkyCoord('9h55m52.7250s +69d40m45.780s')
+center_wcs_co = wcs_co.all_world2pix(center.ra.value,center.dec.value,1,ra_dec_order=True)
 
 
 #crop to fully sampled map region
@@ -176,7 +179,6 @@ sb_pc_text = str(int(sb_pc))+' pc'
 
 
 #get info to draw fully-sampled map region
-center_AOR = SkyCoord('9h55m52.7250s +69d40m45.780s')
 ang_map = -20. #deg, but the cube is already rotated by this much
 fullsamp_x = 185.4 #arcsec
 fullsamp_y = 65.4 #arcsec
@@ -235,6 +237,8 @@ ax.plot([x_text_sb,x_text_sb-sb_pc_pix],[y_text_sb,y_text_sb],'-',color='k',lw=3
 ax.text(np.mean([x_text_sb,x_text_sb-sb_pc_pix]),y_text_sb*0.985,sb_pc_text,
 	color='k',ha='center',va='top',fontsize=plt.rcParams['font.size']-2)
 ax.add_patch(Rectangle((xor,yor),xl,yl,angle=ang_map,ec='k',fc='None',linewidth=1.5,zorder=10))
+c, = ax.plot(center_wcs_co[0],center_wcs_co[1],'kx',markersize=10,mew=3.)
+
 #add snr contours
 #levels = np.array([5,10,25])
 #ax.contour(snr,levels,colors='gray',linewidths=[0.5, 1.0, 1.5],transform=ax.get_transform(wcs))
@@ -302,9 +306,9 @@ for i in range(n_pixels):
 	# spec_col = cmap(int(np.round(cmap_frac)))[0:3]
 	# ax.add_patch(Circle((RA_pix,Dec_pix), bmaj_pix/2, ec='k', fc=spec_col, lw=1.))
 	if np.isnan(spec_val)==False:
-		ax.scatter(RA_pix,Dec_pix,s=MarkerSizeBeamScale(fig,bmaj_pix/2,1.),c=spec_val,cmap=cmap,norm=norm,edgecolors='k',linewidths=1.)
+		ax.scatter(RA_pix,Dec_pix,s=MarkerSizeBeamScale(fig,bmaj/2,1/arcsec2pix),c=spec_val,cmap=cmap,norm=norm,edgecolors='k',linewidths=1.)
 	else:
-		ax.scatter(RA_pix,Dec_pix,s=MarkerSizeBeamScale(fig,bmaj_pix/2,1.),c='w',edgecolors='k',linewidths=1.)
+		ax.scatter(RA_pix,Dec_pix,s=MarkerSizeBeamScale(fig,bmaj/2,1/arcsec2pix),c='w',edgecolors='k',linewidths=1.)
 
 
 new_ymin = ylim[0]-5*bmaj_pix
