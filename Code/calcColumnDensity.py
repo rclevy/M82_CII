@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import upGREATUtils
 from scipy.interpolate import interp1d
+from scipy.special import erf
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import seaborn as sns
@@ -28,7 +29,7 @@ def SigRuln(T,n_CNM):
 
 def NCp_from_TpCII(Tp_CII,dv,B):
 	#Crawford+1985, Goldsmith+2012, Tarantino+2021
-	return dv*Tp_CII/(B*3.3E-16)
+	return dv*Tp_CII/B*3.0E15
 
 def NHI_CII(NCp_from_TpCII,f_CNM):
 	C_H = 1.5E-4 #C/H, Gerin+2015
@@ -39,6 +40,7 @@ def MCp_from_NCp(N_Cp,A_pix_cm2):
 	m_Cp = 1.99E-23 #g
 	Msun = 1.99E33 #g
 	return N_Cp*A_pix_cm2*m_Cp/Msun #Msun
+
 
 #define some fixed parameters
 D_pix = 14.1 #arcsec
@@ -94,7 +96,7 @@ for i in range(n_pixels):
 	cii_vmin = np.nanmin(cii_vel)
 
 	#load the HI data
-	hi_dat = pd.read_csv('../Data/Outflow_Pointings/HI/outflow1_pix'+str(pix_order_labels[i])+'_smo.csv')
+	hi_dat = pd.read_csv('../Data/Outflow_Pointings/HI/outflow1_pix'+str(pix_order_labels[i])+'_smo_summed.csv')
 	hi_vel = np.flip(hi_dat['Velocity_kms'].values)
 	hi_spec = np.flip(hi_dat['Intensity_K'].values)
 	idx = np.where((hi_vel <= cii_vmax) & (hi_vel >= cii_vmin))
@@ -157,8 +159,10 @@ for i in range(n_pixels):
 	#ax.text(0.95,0.95,'$\\frac{N_\mathrm{HI}}{N_\mathrm{HI}^\mathrm{[CII]}} = %.1f$' %med_ratio_N_hi_cii,ha='right',va='top',fontsize=plt.rcParams['font.size']-4,transform=ax.transAxes)
 	# ax.text(0.975,0.975,'med($N_{\mathrm{HI}}/N_{\mathrm{HI}}^{\mathrm{[CII]}}$)=%.1f\nmax($N_{\mathrm{HI}}$)/max($N_{\mathrm{HI}}^{\mathrm{[CII]}}$)=%.1f' %(med_ratio_N_hi_cii,peak_ratio),
 	# 	ha='right',va='top',fontsize=plt.rcParams['font.size']-8,transform=ax.transAxes)
-	ax.text(0.975,0.975,'max($N_{\mathrm{HI}}$)/max($N_{\mathrm{HI}}^{\mathrm{[CII]}}$)=%.1f' %(peak_ratio),
-		ha='right',va='top',fontsize=plt.rcParams['font.size']-8,transform=ax.transAxes)
+	# ax.text(0.975,0.975,'max($N_{\mathrm{HI}}$)/max($N_{\mathrm{HI}}^{\mathrm{[CII]}}$)=%.1f' %(peak_ratio),
+	# 	ha='right',va='top',fontsize=plt.rcParams['font.size']-8,transform=ax.transAxes)
+	ax.text(0.975,0.975,'$\mathrm{\\frac{max(N_{HI})}{max(N_{HI}^{[CII]})}=%.1f}$' %(peak_ratio),
+		ha='right',va='top',fontsize=plt.rcParams['font.size']-4,transform=ax.transAxes)
 
 	if i == 1:
 		leg = plt.legend([(c0,c1),(c2,c3)],[c1.get_label(),c3.get_label()],

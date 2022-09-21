@@ -140,9 +140,8 @@ for i in range(n_pointings):
 		ax.text(0.05,0.95,pix_order_labels[j],ha='center',va='top',transform=ax.transAxes)
 		ax.text(0.975,0.95,'%.2f kpc' %np.round(dist_pc.value/1E3,2),ha='right',va='top',transform=ax.transAxes)
 
-
-		ax.text(0.025,0.8,'CO/%i' %(1/co_sf),color=co_color,fontsize=plt.rcParams['font.size']-3,ha='left',va='top',transform=ax.transAxes)
-		ax.text(0.025,0.7,'HI/%i' %(1/hi_sf),color=hi_color,fontsize=plt.rcParams['font.size']-3,ha='left',va='top',transform=ax.transAxes)
+		ax.text(0.025,0.8,'CO/%.1f' %(1/co_sf),color=co_color,fontsize=plt.rcParams['font.size']-3,ha='left',va='top',transform=ax.transAxes)
+		ax.text(0.025,0.7,'HI/%.1f' %(1/hi_sf),color=hi_color,fontsize=plt.rcParams['font.size']-3,ha='left',va='top',transform=ax.transAxes)
 
 		# if j == n_pixels-1:
 		if j == 1:
