@@ -29,9 +29,11 @@ for i in range(n_pointings):
 
 	if i==0:
 		M_cii = pd.read_csv('../Data/Outflow_Pointings/CII/outflow1_Mass_ColumnDensities.csv')['Mass_Cp_Msun'].values
+		eM_cii = pd.read_csv('../Data/Outflow_Pointings/CII/outflow1_Mass_ColumnDensities.csv')['e_Mass_Cp_Msun_upper'].values
 		pix_ord = pd.read_csv('../Data/Outflow_Pointings/CII/outflow1_Mass_ColumnDensities.csv')['Pixel Number'].values.tolist()
 	else:
 		M_cii = np.nan*np.ones((n_pixels,))
+		eM_cii = np.nan*np.ones((n_pixels,))
 		pix_ord = np.arange(0,n_pixels,1).tolist()
 	
 	for j in range(n_pixels):
@@ -65,12 +67,14 @@ for i in range(n_pointings):
 		#get the C+ mass for this pixel
 		idx = pix_ord.index(j)
 		this_mass = M_cii[idx]
+		this_emass = eM_cii[idx]
 		
 		#calc moments of the spectra
 		dv = this_vel[0]-this_vel[1] #km/s
 		tab = make_moments_from_spectra(this_vel,this_spec,dv,nsig=2.,vmin=vmin,vmax=vmax)
 		tab['rms'] = [rms] #replace with fixed velocity window
 		tab['Mass'] = [this_mass]
+		tab['eMass'] = [this_emass]
 		this_df = pd.DataFrame.from_dict(tab)
 		this_df.to_csv('../Data/Outflow_Pointings/CII_Moments/outflow'+str(i+1)+'_pix'+str(j)+'_momentparams.csv',index=False)
 		
@@ -113,18 +117,18 @@ for i in range(n_pointings):
 				mom2_str = '---'
 				mass_str = '---'
 			else:
-				pk_str = str(int(np.round(df['Max'].values[j]*1E3)))+' $\\pm$ '+str(int(np.round(df['eMax'].values[j]*1E3)))
-				mom0_str = str(int(np.round(df['Mom0'].values[j])))+' $\\pm$ '+str(int(np.round(df['eMom0'].values[j])))
-				mom1_str = str(int(np.round(df['Mom1'].values[j])))+' $\\pm$ '+str(int(np.round(df['eMom1'].values[j])))
-				mom2_str = str(int(np.round(df['Mom2'].values[j])))+' $\\pm$ '+str(int(np.round(df['eMom2'].values[j])))
-				mass_str = '%.1f' %np.log10(df['Mass'].values[j])
+				pk_str = str(np.round(df['Max'].values[j]*1E3,1))+' $\\pm$ '+str(np.round(df['eMax'].values[j]*1E3,1))
+				mom0_str = str(np.round(df['Mom0'].values[j],1))+' $\\pm$ '+str(np.round(df['eMom0'].values[j],1))
+				mom1_str = str(np.round(df['Mom1'].values[j],1))+' $\\pm$ '+str(np.round(df['eMom1'].values[j],1))
+				mom2_str = str(np.round(df['Mom2'].values[j],1))+' $\\pm$ '+str(np.round(df['eMom2'].values[j],1))
+				mass_str = '%.1f $\\pm %.1f$' %(np.log10(df['Mass'].values[j]),df['eMass'].values[j]/(df['Mass'].values[j]*np.log(10)))
 
-			fp.write('%i & %s & %s & %s & %s & %s & %s & %1.f & %s\\\\\n' 
+			fp.write('%i & %s & %s & %s & %s & %s & %s & %.1f & %s\\\\\n' 
 				%(df['Pixel Number'].values[j],RAs[j],Decs[j],pk_str,mom0_str,mom1_str,mom2_str,df['rms'].values[j]*1E3,mass_str))
 
 
 		fp.write('\\enddata\n')
-		fp.write('\\tablecomments{The R.A. and Decl. of the center of each pixel are given. The other columns show the moments of the spectra including the peak intensity (${\\rm I_{peak}}$), the integrataed intensity (moment 0; ${\\rm I_{int}}$), the mean velocity (moment 1; ${\\rm V_0}$), the linewidth (moment 2, $\\sigma_{\\rm V}$), and corresponding uncertainties. The moments are calculated over a fixed velocity range spanning -$100-400$~\\kms. rms is the root-mean-square noise of the spectrum calculated outside of the velocity range used for the moments. If the moments cannot be calculated because the line is not detected, then the rms is calculated over the entire bandpass. All temperatures refer to T$_{\\rm mb}$. ${\\rm M_{C^{+}}}$ is the mass in C$^+$ inferred from the spectrum; see Appendix \\ref{app:density_calc} for details of this calculation.} \n\n')
+		fp.write('\\tablecomments{The R.A. and Decl. of the center of each pixel are given. The other columns show the moments of the spectra including the peak intensity (${\\rm I_{peak}}$), the integrated intensity (moment 0; ${\\rm I_{int}}$), the mean velocity (moment 1; ${\\rm V_0}$), the linewidth (moment 2, $\\sigma_{\\rm V}$), and corresponding uncertainties. The moments are calculated over a fixed velocity range spanning -$100-400$~\\kms. rms is the root-mean-square noise of the spectrum calculated outside of the velocity range used for the moments. If the moments cannot be calculated because the line is not detected, then the rms is calculated over the entire bandpass. All temperatures refer to T$_{\\rm mb}$. ${\\rm M_{C^{+}}}$ is the mass in C$^+$ inferred from the spectrum; see Appendix \\ref{app:density_calc} for details of this calculation.} \n\n')
 		fp.write('\\end{deluxetable*}\n')
 
 

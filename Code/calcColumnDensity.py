@@ -68,8 +68,13 @@ gs = gridspec.GridSpec(n_rows,n_cols)
 
 start_cols = [1,3,0,2,4,1,3]
 
+#EVENTUALLY DONT HARD CODE THIS
+rms = np.array([8.3, 9.4, 9.6, 6.9, 6.8, 16.8, 11.5])/1E3 #K
+
 Nn_cii = []
 Mm_cii = []
+eu_Mm_cii = []
+el_Mm_cii = []
 med_ratios = []
 peak_ratios = []
 
@@ -110,11 +115,23 @@ for i in range(n_pixels):
 	N_cii = NCp_from_TpCII(cii_spec,dv,B_T(T,SigRuln(T,n_CNM))) #cm^-2
 	N_hi_cii = NHI_CII(N_cii,f_CNM)
 
+	#get uncertinaties
+	N_cii_max = NCp_from_TpCII(cii_spec+rms[pix_order_labels[i]],dv,B_T(T,SigRuln(T,n_CNM))) #cm^-2
+	N_hi_cii_max = NHI_CII(N_cii_max,f_CNM)
+	N_cii_min = NCp_from_TpCII(cii_spec-rms[pix_order_labels[i]],dv,B_T(T,SigRuln(T,n_CNM))) #cm^-2
+	N_hi_cii_min = NHI_CII(N_cii_min,f_CNM)
+
 	#sum the CII column
 	N_cii_sum = np.nansum(N_cii)
+	N_cii_max_sum = np.nansum(N_cii_max)
+	N_cii_min_sum = np.nansum(N_cii_min)
 	Nn_cii.append(N_cii_sum)
 	this_M_cii = MCp_from_NCp(N_cii_sum,A_pix_cm2) #Msun
+	this_M_cii_max = MCp_from_NCp(N_cii_max_sum,A_pix_cm2) #Msun
+	this_M_cii_min = MCp_from_NCp(N_cii_min_sum,A_pix_cm2) #Msun
 	Mm_cii.append(this_M_cii) #Msun
+	eu_Mm_cii.append(this_M_cii_max-this_M_cii)
+	el_Mm_cii.append(this_M_cii-this_M_cii_min)
 
 	#convert the HI intensity back to a column density
 	N_hi = hi_spec*dv*1.823E18 #cm^-2
@@ -188,11 +205,19 @@ plt.savefig('../Plots/Outflow_Spectra/M82_ColumnDensity_CII_HI_Outflow1.pdf',bbo
 plt.close('all')
 
 Mmm_cii = Mm_cii.copy()
+eu_Mmm_cii = eu_Mm_cii.copy()
+el_Mmm_cii = el_Mm_cii.copy()
 Mmm_cii[4]=0.
 Mmm_cii[5]=0.
+eu_Mmm_cii[4]=0.
+el_Mmm_cii[5]=0.
+eu_Mmm_cii[4]=0.
+el_Mmm_cii[5]=0.
 print('The total C+ mass in the outflow is %.2e Msun' %np.nansum(Mmm_cii))
 
-tab = {'Pixel Number':pix_order_labels, 'ColumnDensity_Cp_cm2': Nn_cii, 'Mass_Cp_Msun':Mm_cii, 'med_NHI_NHICII': med_ratios, 'peak_NHI_NHICII': peak_ratios}
+tab = {'Pixel Number':pix_order_labels, 'ColumnDensity_Cp_cm2': Nn_cii,
+	'Mass_Cp_Msun':Mm_cii,'e_Mass_Cp_Msun_upper':eu_Mm_cii,'e_Mass_Cp_Msun_lower':el_Mm_cii,
+	'med_NHI_NHICII': med_ratios, 'peak_NHI_NHICII': peak_ratios}
 df = pd.DataFrame.from_dict(tab)
 df.to_csv('../Data/Outflow_Pointings/CII/outflow1_Mass_ColumnDensities.csv',index=False)
 
