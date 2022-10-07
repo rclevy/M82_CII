@@ -55,8 +55,10 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap,Normalize
 from matplotlib.colorbar import ColorbarBase
 from matplotlib import cm
+from matplotlib.ticker import AutoMinorLocator
 import seaborn as sns
 from scipy.ndimage import rotate
+from spectral_cube import SpectralCube
 plt.rcParams['font.family']='serif'
 plt.rcParams['mathtext.rm'] = 'serif'
 plt.rcParams['mathtext.fontset'] = 'cm'
@@ -68,28 +70,46 @@ def MarkerSizePixelScale(fig,arcsec2pix,dist):
 	s = pperpix*impix_pc
 	return s
 
+def rot_map_horiz(arr):
+	PA = -20.#deg
+	arr[np.isnan(arr)==True]=-999
+	arr_rot = rotate(arr,PA,reshape=False)	
+	arr_rot[arr_rot<=0]=np.nan
+	return arr_rot
+
+def rot_cube_horiz(arr):
+	PA = -20.#deg
+	arr[np.isnan(arr)==True]=0
+	arr_rot = rotate(arr,PA,axes=(2,1),reshape=False)	
+	arr_rot[arr_rot<=-800]=np.nan
+	arr_rot[arr_rot==0]=np.nan
+	return arr_rot
+
 cii_color = sns.color_palette('crest',as_cmap=True)(150)
 co_color = '0.66'
 cii_cmap = ListedColormap(sns.cubehelix_palette(start=0.6,rot=-0.65,light=0.9,dark=0.2,n_colors=256,reverse=False))
 co_cmap = ListedColormap(cm.gist_yarg(range(256)))
+co_cmap.set_over('k')
 
 #open the masked CII integrated intensity map
-I_CII = fits.open('../Data/Disk_Map/Moments/M82_CII_map_mom0_matchedCIICO.fits')
+I_CII = fits.open('../Data/Disk_Map/Moments/M82_CII_map_mom0_matchedCIICO.fits')[0].data
 I_CII_mask = I_CII_SNR2.copy()
 I_CII_mask[np.isnan(I_CII_SNR2)==False]=1.
 fits.writeto('../Data/Disk_Map/Moments/M82_CII_map_maskSNR2.fits',data=I_CII_mask,header=hdr_I_CII,overwrite=True)
-pix_size_arcsec = I_CII[0].header['CDELT2']*3600
+pix_size_arcsec = hdr_I_CII['CDELT2']*3600
 A_pix_pc2 = (pix_size_arcsec/206265*d)**2 #pc^2
 A_pix_cm2 = A_pix_pc2*(3.086E18)**2 #cm^2
-I_CII = I_CII[0].data*I_CII_mask
 I_CII[I_CII<=0]=np.nan
 I_CII[I_CII > 800]=800.
+I_CII_rot = rot_map_horiz(I_CII)
+I_CII_rot = I_CII_rot#*I_CII_mask
 V_CII = fits.open('../Data/Disk_Map/Moments/M82_CII_map_mom1_matchedCIICO.fits')
 hdr = V_CII[0].header
 arcsec2pix = hdr['CDELT2']*3600
 wcs = WCS(hdr)
 V_CII = V_CII[0].data
-Vsys_CO = 222.
+V_CII_rot = rot_map_horiz(V_CII)#*I_CII_mask
+Vsys_CO = 218.
 Vsys_CII = 212.
 Vmax_CII = 85. #EYEBALLED
 #this cube is already oriented with the major axis || to x-axis
@@ -106,13 +126,10 @@ hdr_CO = V_CO[0].header
 wcs_CO = WCS(hdr_CO)
 arcsec2pix_CO = hdr_CO['CDELT2']*3600
 V_CO = V_CO[0].data
-V_CO[np.isnan(V_CO)==True]=-999
 RA_pix_CO,Dec_pix_CO = wcs_CO.all_world2pix(cen.ra,cen.dec,1,ra_dec_order=True)
 #rotate the CO so that the major axis is horizontal
-PA = -67.#deg
-V_CO_rot = rotate(V_CO,PA,reshape=False)
+V_CO_rot = rot_map_horiz(V_CO)
 #clean up
-V_CO_rot[V_CO_rot==0]=np.nan
 V_CO_rot[V_CO_rot>Vsys_CO+150]=np.nan
 V_CO_rot[V_CO_rot<Vsys_CO-150]=np.nan
 #crop to fully sampled region of CII (3'x1')
@@ -120,14 +137,12 @@ V_CO_rot[0:int(Dec_pix_CO-30/arcsec2pix_CO),:]=np.nan
 V_CO_rot[int(Dec_pix_CO+30/arcsec2pix_CO):,:]=np.nan
 V_CO_rot[:,0:int(RA_pix_CO-90/arcsec2pix_CO)]=np.nan
 V_CO_rot[:,int(RA_pix_CO+90/arcsec2pix_CO):]=np.nan
-xax_off_pix_CO = np.arange(1,V_CO_rot.shape[1]+1,1)-RA_pix_CO
+xax_off_pix_CO = np.arange(0,V_CO_rot.shape[1],1)-RA_pix_CO
 xax_off_arcsec_CO = xax_off_pix_CO*arcsec2pix_CO
 xax_off_pc_CO = xax_off_arcsec_CO/206265*d #pc
 xax_off_kpc_CO = xax_off_pc_CO/1E3 #kpc
 I_CO = fits.open('../Data/Ancillary_Data/M82.CO.30m.IRAM_reprocessed_mom0_matchedCIICO.fits')[0].data
-I_CO[np.isnan(I_CO)==True]=-999
-I_CO_rot = rotate(I_CO,PA,reshape=False)
-I_CO_rot[I_CO_rot<=0]=np.nan
+I_CO_rot = rot_map_horiz(I_CO)
 I_CO_rot[I_CO_rot>800]=800
 Vmax_CO = 85.
 
@@ -141,8 +156,8 @@ for i in range(V_CO_rot.shape[0]):
 plt.axhline(Vmax_CO,color=co_color,lw=1.5)
 plt.axhline(-Vmax_CO,color=co_color,lw=1.5)
 for i in range(V_CII.shape[0]):
-	plt.scatter(xax_off_kpc,V_CII[i,:]-Vsys_CII,s=MarkerSizePixelScale(fig,arcsec2pix*1.2,d),marker='_',
-		alpha=0.75,lw=8,c=I_CII[i,:],cmap=cii_cmap,zorder=2)
+	plt.scatter(xax_off_kpc,V_CII_rot[i,:]-Vsys_CII,s=MarkerSizePixelScale(fig,arcsec2pix*1.2,d),marker='_',
+		alpha=0.75,lw=8,c=I_CII_rot[i,:],cmap=cii_cmap,zorder=2)
 plt.axhline(Vmax_CII,color=cii_color,lw=1.5,linestyle='--')
 plt.axhline(-Vmax_CII,color=cii_color,lw=1.5,linestyle='--')
 # plt.axhline(0,color='gray',zorder=1,alpha=0.5,lw=0.75)
@@ -153,9 +168,8 @@ plt.ylabel('Velocity (km s$^{-1})$')
 plt.minorticks_on()
 plt.xlim(-1.5,1.5)
 plt.ylim(-120,120)
-
 #make colorbars for the CII and CO data
-I_CII[0,0]=0.
+I_CII_rot[0,0]=0.
 I_CO_rot[0,0]=0.
 ax_cii = fig.add_axes([0.92,0.125,0.025,0.75])
 norm_cii = Normalize(vmin=0,vmax=800)
@@ -167,6 +181,115 @@ levels = np.arange(0,850,100)
 for i in range(len(levels)):
 	this_col = co_cmap(int(256/len(levels)*i))
 	cb_cii.ax.hlines(levels[i],0,levels[-1],colors=this_col,linewidth=2)
+plt.savefig('../Plots/Center_Maps/M82_CII_CO_PVdiagram_RCLversion.pdf',bbox_inches='tight',metadata={'Creator':this_script})
+
+
+#make a more traditional PV diagram
+cii_cube = fits.open('../Data/Disk_Map/M82_CII_map_fullysampled_matchedCIICO.fits')
+hdr = cii_cube[0].header
+cii_cube = cii_cube[0].data
+co_cube = fits.open('../Data/Ancillary_Data/M82.CO.30m.IRAM_reprocessed_matchedCIICO.fits')[0].data
+#rotate the cube so the major axis is horizontal
+cii_cube_rot = rot_cube_horiz(cii_cube.copy())
+co_cube_rot = rot_cube_horiz(co_cube.copy())
+#collapse the cubes along the y-axis weighting by the intensity
+cii_cube_rot[np.isnan(cii_cube_rot)==True]=0.
+cii_pv = np.average(cii_cube_rot,axis=1,weights=cii_cube_rot)
+co_cube_rot[np.isnan(co_cube_rot)==True]=0.
+co_pv = np.average(co_cube_rot,axis=1,weights=co_cube_rot)
+levels = np.arange(0.25,3.5,0.5)
+#now plot
+fig=plt.figure(1)
+plt.clf()
+im = plt.imshow(cii_pv,cmap=cii_cmap,vmin=0,vmax=3.5,aspect='auto')
+ax = plt.gca()
+con = ax.contour(co_pv,levels=levels,cmap=co_cmap,extend='both')
+#relabel axes
+x = xax_off_kpc.copy()
+xl_kpc = 1.5
+xmax = np.argmin(np.abs(x-xl_kpc))
+xmin = np.argmin(np.abs(-xl_kpc-x))
+xt = np.linspace(xmin,xmax,7)
+xtl = np.linspace(-xl_kpc,xl_kpc,7)
+ax.set_xticks(xt)
+ax.set_xticklabels(xtl)
+ax.xaxis.set_minor_locator(AutoMinorLocator(5))
+plt.xlim(xmin,xmax)
+ax.set_xlabel('Offset from Center along Major Axis (kpc)')
+vax = SpectralCube.read('../Data/Disk_Map/M82_CII_map_fullysampled_matchedCIICO.fits').spectral_axis.value
+Vsys = 210.
+y = vax-Vsys
+yl_kms = 200.
+ymax = np.argmin(np.abs(y-yl_kms))
+ymin = np.argmin(np.abs(-yl_kms-y))
+yt = np.linspace(ymin,ymax,9)
+ytl = np.linspace(-yl_kms,yl_kms,9).astype(int)
+ax.set_yticks(yt)
+ax.set_yticklabels(ytl)
+ax.yaxis.set_minor_locator(AutoMinorLocator(6))
+# yl_kms = 120.
+# ymax = np.argmin(np.abs(y-yl_kms))
+# ymin = np.argmin(np.abs(-yl_kms-y))
+plt.ylim(ymin,ymax)
+ax.set_ylabel('Velocity (km s$^{-1}$)')
+plt.grid(which='major',axis='both',alpha=0.2)
+#add colorbar
+cb = plt.colorbar(im)
+#cb.ax.tick_params(labelsize=10)
+cb.set_label('Intensity (K)')#,fontsize=10)
+cb.add_lines(con)
+plt.savefig('../Plots/Center_Maps/M82_CII_CO_PVdiagram.pdf',bbox_inches='tight',metadata={'Creator':this_script})
+
+
+
+
+
+
+
+
+
+
+
+
+
+# #don't think pvextractor is going to work because it works in gal lat and long!
+# from pvextractor import PathFromCenter, extract_pv_slice
+# import astropy.units as u
+# from spectral_cube import SpectralCube
+# cii_cube = SpectralCube.read('../Data/Disk_Map/M82_CII_map_fullysampled_matchedCIICO.fits')
+# co_cube = SpectralCube.read('../Data/Ancillary_Data/M82.CO.30m.IRAM_reprocessed_matchedCIICO.fits')
+# pl = 3.1*u.arcmin
+# pw = 1.1*u.arcmin
+# pa = 200.*u.deg
+# Nsamp = int(np.round((pl/(cii_cube.header['CDELT2']*u.deg).to(u.arcmin)).value))
+# p = PathFromCenter(center=cen,length=pl,width=pw,angle=pa,sample=Nsamp)
+# cii_pv = extract_pv_slice(cii_cube,p)
+# co_pv = extract_pv_slice(co_cube,p)
+# #cii_pv.header['CRPIX1']=int(cii_pv.header['NAXIS1']-1)/2
+
+# fig=plt.figure(1)
+# plt.clf()
+# ax = plt.subplot(111,projection=WCS(cii_pv.header))
+# im = plt.imshow(cii_pv.data,cmap=cii_cmap)
+# #im = plt.imshow(co_pv.data,cmap=co_cmap)
+# ax.set_aspect(0.25)
+# ax.invert_yaxis()
+# ax.coords[0].set_format_unit(u.arcsec)
+# ax.coords[0].set_major_formatter('x')
+# ax.coords[0].display_minor_ticks(True)
+# ax.coords[1].set_format_unit(u.km/u.s)
+# ax.coords[1].display_minor_ticks(True)
+# #get the center pixel num
+# crpix1 = int((cii_pv.header['NAXIS1']-1)/2)
+# ax.set_xlabel('Offset from Center (")')
+# ax.set_ylabel('Velocity (km s$^{-1}$)')
+# ax.axvline(cii_pv.header['CRPIX1'],color='gray')
+# ax.axhline(int(cii_pv.header['NAXIS2'])/2,color='gray')
+
+
+
+
+
 
 
 
@@ -189,11 +312,6 @@ for i in range(len(levels)):
 # plt.setp(plt.getp(cb_co.ax.axes, 'yticklabels'), color='w',
 # 	rotation=90,verticalalignment='center',x=-0.25)
 # cb_co.set_label('CO Integrated Intensity (K km s$^{-1}$)',fontsize=10)
-
-plt.savefig('../Plots/Center_Maps/M82_CII_CO_PVdiagram.pdf',bbox_inches='tight',metadata={'Creator':this_script})
-
-
-
 
 
 

@@ -151,33 +151,39 @@ for i in range(n_pixels):
 	peak_ratio = np.nanmax(N_hi)/N_hi_cii[ixp]
 	peak_ratios.append(peak_ratio)
 
+
+	#
+	norm = 1E20
+
 	#also compare for different values of f_CNM
-	N_hi_cii_70 = NHI_CII(N_cii,0.7)
-	N_hi_cii_30 = NHI_CII(N_cii,0.3)
-	d_fCNM = np.nanmedian(N_hi_cii_30[vix]-N_hi_cii_70[vix])/1E21
-	d_fCNM_mid = np.nanmedian(N_hi_cii_30[vix]-N_hi_cii[vix])/1E21
+	N_hi_cii_70 = NHI_CII(N_cii,0.7)/dv
+	N_hi_cii_30 = NHI_CII(N_cii,0.3)/dv
+	d_fCNM = np.nanmedian(N_hi_cii_30[vix]/norm-N_hi_cii_70[vix]/norm)
+	d_fCNM_mid = np.nanmedian(N_hi_cii_30[vix]/norm-N_hi_cii[vix]/dv/norm)
 
 
 	#plot the data
 	ax = plt.subplot(gs[this_row,start_cols[i]:start_cols[i]+2],)
-	c2=ax.fill_between(cii_vel[vix],N_hi[vix]/1E21,color=hi_color,alpha=0.1,step='pre')
-	c0=ax.fill_between(cii_vel[vix],N_hi_cii[vix]/1E21,color=cii_color,alpha=0.5,step='pre')
-	c3,=ax.step(cii_vel,N_hi/1E21,color=hi_color,lw=1.75,label='$N_{\mathrm{HI}}$')#\\%.1e' %(1/hi_sf))
-	c1,=ax.step(cii_vel,N_hi_cii/1E21,color=cii_color,lw=1.5,label='$N_{\mathrm{HI}}^{\mathrm{[CII]}}$')
+	c2=ax.fill_between(cii_vel[vix],N_hi[vix]/dv/norm,color=hi_color,alpha=0.1,step='pre')
+	c0=ax.fill_between(cii_vel[vix],N_hi_cii[vix]/dv/norm,color=cii_color,alpha=0.5,step='pre')
+	c3,=ax.step(cii_vel,N_hi/dv/norm,color=hi_color,lw=1.75,label='$N_{\mathrm{HI}}$')#\\%.1e' %(1/hi_sf))
+	c1,=ax.step(cii_vel,N_hi_cii/dv/norm,color=cii_color,lw=1.5,label='$N_{\mathrm{HI}}^{\mathrm{[CII]}}$')
+	
+	#add errorbars for different f_cnm values
 	xx = -120; yy = 3.25;
 	ax.plot([xx,xx],[yy,yy-d_fCNM],color=cii_color,lw=1.5)
 	ax.plot([xx-10,xx+10],[yy-d_fCNM_mid,yy-d_fCNM_mid],color=cii_color,lw=1.5)
-	ax.plot([xx-10,xx+10],[yy,yy],color=cii_color,lw=1.5)
-	ax.plot([xx-10,xx+10],[yy-d_fCNM,yy-d_fCNM],color=cii_color,lw=1.5)
-
-	#ax.errorbar(cii_vel[ix_peak],N_hi_cii[ix_peak],yerr=(N_hi_cii[ix_peak]-N_hi_cii_70[ix_peak],N_hi_cii_30[ix_peak]-N_hi_cii[ix_peak]),color='cii_color',capsize=5)
+	ax.plot([xx-5,xx+5],[yy,yy],color=cii_color,lw=1.5)
+	ax.plot([xx-5,xx+5],[yy-d_fCNM,yy-d_fCNM],color=cii_color,lw=1.5)
+	if i==0:
+		ax.text(xx+10,yy,' $f_\mathrm{CNM}$=0.3',color=cii_color,
+			ha='left',va='center',fontsize=plt.rcParams['font.size']-8)
+		ax.text(xx+10,yy-d_fCNM_mid,' $f_\mathrm{CNM}$=0.5',color=cii_color,
+			ha='left',va='center',fontsize=plt.rcParams['font.size']-8)
+		ax.text(xx+10,yy-d_fCNM,' $f_\mathrm{CNM}$=0.7',color=cii_color,
+			ha='left',va='center',fontsize=plt.rcParams['font.size']-8)
 
 	ax.text(0.05,0.95,pix_order_labels[i],ha='center',va='top',transform=ax.transAxes)
-	#ax.text(0.95,0.95,'$\\frac{N_\mathrm{HI}}{N_\mathrm{HI}^\mathrm{[CII]}} = %.1f$' %med_ratio_N_hi_cii,ha='right',va='top',fontsize=plt.rcParams['font.size']-4,transform=ax.transAxes)
-	# ax.text(0.975,0.975,'med($N_{\mathrm{HI}}/N_{\mathrm{HI}}^{\mathrm{[CII]}}$)=%.1f\nmax($N_{\mathrm{HI}}$)/max($N_{\mathrm{HI}}^{\mathrm{[CII]}}$)=%.1f' %(med_ratio_N_hi_cii,peak_ratio),
-	# 	ha='right',va='top',fontsize=plt.rcParams['font.size']-8,transform=ax.transAxes)
-	# ax.text(0.975,0.975,'max($N_{\mathrm{HI}}$)/max($N_{\mathrm{HI}}^{\mathrm{[CII]}}$)=%.1f' %(peak_ratio),
-	# 	ha='right',va='top',fontsize=plt.rcParams['font.size']-8,transform=ax.transAxes)
 	ax.text(0.975,0.975,'$\mathrm{\\frac{max(N_{HI})}{max(N_{HI}^{[CII]})}=%.1f}$' %(peak_ratio),
 		ha='right',va='top',fontsize=plt.rcParams['font.size']-4,transform=ax.transAxes)
 
@@ -197,12 +203,12 @@ for i in range(n_pixels):
 		ax.set_xlabel('V$_{\mathrm{LSRK}}$ (km s$^{-1}$)')
 		#ax.set_ylabel('N$_{\mathrm{HI}}$ ($\\times10^{21}$ cm$^{-2}$)')
 	elif (i==0):
-		ax.set_ylabel('N$_{\mathrm{HI}}$ ($\\times10^{21}$ cm$^{-2}$)')
+		ax.set_ylabel('$N\\times10^{%i}$\n(cm$^{-2}$ (km s$^{-1}$)$^{-1}$)' %np.log10(norm))
 	elif (i==1) | (i==3) | (i==4) | (i==6):
 		#ax.xaxis.set_ticklabels([])
 		ax.yaxis.set_ticklabels([])
 plt.savefig('../Plots/Outflow_Spectra/M82_ColumnDensity_CII_HI_Outflow1.pdf',bbox_inches='tight',metadata={'Creator':this_script})
-plt.close('all')
+
 
 Mmm_cii = Mm_cii.copy()
 eu_Mmm_cii = eu_Mm_cii.copy()
@@ -222,4 +228,34 @@ df = pd.DataFrame.from_dict(tab)
 df.to_csv('../Data/Outflow_Pointings/CII/outflow1_Mass_ColumnDensities.csv',index=False)
 
 
+#now add the CO to the column density plot
+del(leg)
+for i in range(n_pixels):
+	this_row = int(np.floor((i+1)/n_rows))
+
+	#open the CO data
+	co_dat = pd.read_csv('../Data/Outflow_Pointings/CO_TP/outflow1_pix'+str(pix_order_labels[i])+'_smo.csv')
+	co_vel = co_dat['Velocity_kms'].values
+	co_spec = co_dat['Intensity_K'].values
+	idx = np.where((co_vel <= cii_vmax) & (co_vel >= cii_vmin))
+	co_vel = co_vel[idx]
+	co_spec = co_spec[idx]
+	#interpolate hi onto cii velocity grid
+	co_int = interp1d(co_vel,co_spec,fill_value='extrapolate')
+	co_spec = co_int(cii_vel)
+
+	#now convert the CO intensity to a H2 column density
+	XCO = 0.5E20 #cm-2/(K km/s), starburst value from Bolatto+2013
+	#XCO = 2E20 #cm-2/(K km/s), MW value from Bolatto+2013
+	N_h2_co = XCO*co_spec*dv #cm^-2
+
+	ax = plt.subplot(gs[this_row,start_cols[i]:start_cols[i]+2],)
+	c4=ax.fill_between(cii_vel[vix],N_h2_co[vix]/dv/norm,color=co_color,alpha=0.1,step='pre')
+	c5,=ax.step(cii_vel,N_h2_co/dv/norm,color=co_color,lw=1.75,label='$N_{\mathrm{H_{2}}}^{\mathrm{CO}}$')#\\%.1e' %(1/hi_sf))
+
+
+	if i == 1:
+		leg = plt.legend([(c0,c1),(c2,c3),(c4,c5)],[c1.get_label(),c3.get_label(),c5.get_label()],
+			handlelength=1.25,fontsize=plt.rcParams['font.size']-2,loc='center left',bbox_to_anchor=(1.025,0.625,0.2,0.2))
+plt.savefig('../Plots/Outflow_Spectra/M82_ColumnDensity_CII_HI_CO_Outflow1.pdf',bbox_inches='tight',metadata={'Creator':this_script})
 
