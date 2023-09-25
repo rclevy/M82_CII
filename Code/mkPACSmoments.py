@@ -69,7 +69,7 @@ hdu = fits.ImageHDU(data=cube_contsub,header=hdr_cube)
 hdul = fits.HDUList([hdu0,hdu])
 hdul.writeto('../Data/Ancillary_Data/Herschel_PACS_spec_158um_cube_contsub.fits',overwrite=True)
 
-
+#map a mom0 over the contsub cube
 
 #now don't do a continuum subtraction
 mom0 = cube.moment(order=0)

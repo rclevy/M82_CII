@@ -75,15 +75,29 @@ for i in range(n_pointings):
 		tab['rms'] = [rms] #replace with fixed velocity window
 		tab['Mass'] = [this_mass]
 		tab['eMass'] = [this_emass]
+
+
+		#open the HI and CO mom0
+		hi_moms = pd.read_csv('../Data/Outflow_Pointings/HI_Moments/outflow'+str(i+1)+'_pix'+str(j)+'_momentparams.csv')
+		tab['Mom0_HI'] = [hi_moms['Mom0'].values[0]]
+		tab['eMom0_HI'] = [hi_moms['eMom0'].values[0]]
+		co_moms = pd.read_csv('../Data/Outflow_Pointings/CO_TP_Moments/outflow'+str(i+1)+'_pix'+str(j)+'_momentparams.csv')
+		tab['Mom0_CO'] = [co_moms['Mom0'].values[0]]
+		tab['eMom0_CO'] = [co_moms['eMom0'].values[0]]
+
 		this_df = pd.DataFrame.from_dict(tab)
 		this_df.to_csv('../Data/Outflow_Pointings/CII_Moments/outflow'+str(i+1)+'_pix'+str(j)+'_momentparams.csv',index=False)
 		
 		dfs.append(this_df)
 
+		
+
+
 	#concat all the pixels into one table
 	df = pd.concat(dfs)
 	df.insert(0,'Pixel Number',range(n_pixels),True)
 	df.set_index('Pixel Number',drop=False,inplace=True)
+
 	#remove low SNR values
 	idx = np.where((df['Mom2']/df['eMom2']).values < 0.1)[0].tolist()
 	for bad_el in idx:
@@ -96,6 +110,13 @@ for i in range(n_pointings):
 		df.at[bad_el,'Mom2'] = np.nan
 		df.at[bad_el,'eMom2'] = np.nan
 		df.at[bad_el,'Mass'] = np.nan
+
+	#get the CII/HI and CII/CO ratios
+	df = df.assign(ratio_Mom0_HI_CII=df['Mom0_HI']/df['Mom0'])
+	df = df.assign(eratio_Mom0_HI_CII=df['ratio_Mom0_HI_CII']*np.sqrt((df['eMom0']/df['Mom0'])**2+(df['eMom0_HI']/df['Mom0_HI'])**2))
+	df = df.assign(ratio_Mom0_CO_CII=df['Mom0_CO']/df['Mom0'])
+	df = df.assign(eratio_Mom0_CO_CII=df['ratio_Mom0_CO_CII']*np.sqrt((df['eMom0']/df['Mom0'])**2+(df['eMom0_CO']/df['Mom0_CO'])**2))
+
 
 	df.to_csv('../Data/Outflow_Pointings/CII_Moments/outflow'+str(i+1)+'_momentparams.csv',index=False)
 
@@ -128,9 +149,36 @@ for i in range(n_pointings):
 
 
 		fp.write('\\enddata\n')
-		fp.write('\\tablecomments{The R.A. and Decl. of the center of each pixel are given. The other columns show the moments of the spectra including the peak intensity (${\\rm I_{peak}}$), the integrated intensity (moment 0; ${\\rm I_{int}}$), the mean velocity (moment 1; ${\\rm V_0}$), the linewidth (moment 2, $\\sigma_{\\rm V}$), and corresponding uncertainties. The moments are calculated over a fixed velocity range spanning -$100-400$~\\kms. rms is the root-mean-square noise of the spectrum calculated outside of the velocity range used for the moments. If the moments cannot be calculated because the line is not detected, then the rms is calculated over the entire bandpass. All temperatures refer to T$_{\\rm mb}$. ${\\rm M_{C^{+}}}$ is the mass in C$^+$ inferred from the spectrum; see Appendix \\ref{app:density_calc} for details of this calculation.} \n\n')
+		fp.write('\\tablecomments{The R.A. and Decl. of the center of each pixel are given. The other columns show the moments of the spectra including the peak intensity (${\\rm I_{peak}}$), the integrated intensity (moment 0; ${\\rm I_{int}}$), the mean velocity (moment 1; ${\\rm V_0}$), the linewidth (moment 2, $\\sigma_{\\rm V}$), and corresponding uncertainties. The moments are calculated over a fixed velocity range spanning -$100-400$~\\kms. rms is the root-mean-square noise of the spectrum calculated outside of the velocity range used for the moments. If the moments cannot be calculated because the line is not detected, then the rms is calculated over the entire bandpass. All temperatures refer to T$_{\\rm mb}$. ${\\rm M_{C^{+}}}$ is the mass in C$^+$ inferred from the spectrum considering only collisions with the atomic gas; see Appendix \\ref{app:density_calc} for details of this calculation.} \n\n')
 		fp.write('\\end{deluxetable*}\n')
 
+	#write this table to a tex file
+	tex_tab_file = '../Data/Outflow_Pointings/CII_Moments/outflow'+str(i+1)+'_momentparams_COHI.tex'
+	with open(tex_tab_file,'w') as fp:
+		fp.write('\\begin{deluxetable}{ccc}\n')
+		fp.write('\\tablecaption{Ratios of the \\CII, \\HI, and CO integrated intensities in the outflow.\\label{tab:outflowfits_HICO}}\n')
+		# fp.write('\\tablehead{Pixel Number & ${\\rm log_{10}(I_{int,HI}/I_{int,[CII]})}$ & ${\\rm log_{10}(I_{int,CO}/I_{int,[CII]})}$}')
+		fp.write('\\tablehead{Pixel Number & ${\\rm I_{int,HI}/I_{int,[CII]}}$ & ${\\rm I_{int,CO}/I_{int,[CII]}}$}')
+		fp.write('\\startdata\n')
+
+		for j in range(n_pixels):
+			#convert to strings
+			if j in idx:
+				ratio_hi_str = '---'
+				ratio_co_str = '---'
+			else:
+				# ratio_hi_str = '%.2f $\\pm %.2f$' %(np.log10(df['ratio_Mom0_HI_CII'].values[j]),df['eratio_Mom0_HI_CII'].values[j]/(df['ratio_Mom0_HI_CII'].values[j]*np.log(10)))
+				# ratio_co_str = '%.2f $\\pm %.2f$' %(np.log10(df['ratio_Mom0_CO_CII'].values[j]),df['eratio_Mom0_CO_CII'].values[j]/(df['ratio_Mom0_CO_CII'].values[j]*np.log(10)))
+				ratio_hi_str = '%.1f $\\pm$ %.1f' %(df['ratio_Mom0_HI_CII'].values[j],df['eratio_Mom0_HI_CII'].values[j])
+				ratio_co_str = '%.1f $\\pm$ %.1f' %(df['ratio_Mom0_CO_CII'].values[j],df['eratio_Mom0_CO_CII'].values[j])
+
+			fp.write('%i & %s & %s\\\\\n' 
+				%(df['Pixel Number'].values[j],ratio_hi_str,ratio_co_str))
+
+
+		fp.write('\\enddata\n')
+		fp.write('\\tablecomments{The integrated intensity ratios are in K~km~s$^{-1}$ units.} \n\n')
+		fp.write('\\end{deluxetable}\n')
 
 
 

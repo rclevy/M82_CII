@@ -58,8 +58,11 @@ for i in range(n_pointings):
 
 	if i==0:
 		cii_sf_N = pd.read_csv('../Data/Outflow_Pointings/CII/outflow1_Mass_ColumnDensities.csv')['peak_NHI_NHICII'].values
+		cii_sf_N_h2 = pd.read_csv('../Data/Outflow_Pointings/CII/outflow1_Mass_ColumnDensities.csv')['peak_NH2_NH2CII'].values
+
 	else:
 		cii_sf_N = np.ones((n_pixels,))
+		cii_sf_N_h2 = np.ones((n_pixels,))
 
 	for j in range(n_pixels):
 		this_row = int(np.floor((j+1)/n_rows))
@@ -69,19 +72,22 @@ for i in range(n_pointings):
 		Vclip_red,Vclip_blue = upGREATUtils.get_bad_edge_chans(i,pix_order_labels[j])
 		cii_vel,cii_spec = upGREATUtils.rm_bad_edge_chans(cii_vel,cii_spec,which_end='both',Vred=Vclip_red,Vblue=Vclip_blue)
 		
+		vel_min = -175
+		vel_max = 565
 
 		this_sf_N = cii_sf_N[j] #additional scaling based on the column density ratio
+		this_sf_N_h2 = cii_sf_N_h2[j] #additional scaling based on the column density ratio
 
 		cii_vel = np.flip(cii_vel)
 		cii_spec = np.flip(cii_spec)
 		#cii_spec_norm = cii_spec/np.nanmax(cii_spec)
 		cii_dv = header['CDELT1']/header['RESTFREQ']*2.9979E5 #km/s
-		cii_vix = np.where((cii_vel>=-100) & (cii_vel <= 400))
+		cii_vix = np.where((cii_vel>=vel_min) & (cii_vel <= vel_max))
 		cii_max = np.nanmax(cii_spec[cii_vix])
 
-		n_edge = 6
-		cii_vel = cii_vel[0:-n_edge]
-		cii_spec = cii_spec[0:-n_edge]
+		# n_edge = 6
+		# cii_vel = cii_vel[0:-n_edge]
+		# cii_spec = cii_spec[0:-n_edge]
 		cii_vmax = np.nanmax(cii_vel)
 		cii_vmin = np.nanmin(cii_vel)
 
@@ -93,8 +99,8 @@ for i in range(n_pointings):
 		idx = np.where((hi_vel <= cii_vmax) & (hi_vel >= cii_vmin))
 		hi_vel = hi_vel[idx]
 		hi_spec = hi_spec[idx]
-		hi_vix = np.where((hi_vel>-100) & (hi_vel < 400))
-		hi_sf = cii_max/np.nanmax(hi_spec[hi_vix])*this_sf_N
+		hi_vix = np.where((hi_vel>vel_min) & (hi_vel < vel_max))
+		hi_sf = cii_max/np.nanmax(hi_spec[hi_vix])#*this_sf_N
 		hi_norms[j] = 1/hi_sf
 		hi_spec_norm = hi_spec*hi_sf
 
@@ -105,8 +111,8 @@ for i in range(n_pointings):
 		idx = np.where((co_vel <= cii_vmax) & (co_vel >= cii_vmin))
 		co_vel = co_vel[idx]
 		co_spec = co_spec[idx]
-		co_vix = np.where((co_vel>-100) & (co_vel < 400))
-		co_sf = cii_max/np.nanmax(co_spec[co_vix])*this_sf_N
+		co_vix = np.where((co_vel>vel_min) & (co_vel < vel_max))
+		co_sf = cii_max/np.nanmax(co_spec[co_vix])#*this_sf_N_h2
 		co_norms[j] = 1/co_sf
 		co_spec_norm = co_spec*co_sf
 
@@ -143,13 +149,17 @@ for i in range(n_pointings):
 		ax.text(0.025,0.8,'CO/%.1f' %(1/co_sf),color=co_color,fontsize=plt.rcParams['font.size']-3,ha='left',va='top',transform=ax.transAxes)
 		ax.text(0.025,0.7,'HI/%.1f' %(1/hi_sf),color=hi_color,fontsize=plt.rcParams['font.size']-3,ha='left',va='top',transform=ax.transAxes)
 
+
+		ax.grid(which='major',axis='y',alpha=0.5)
+
 		# if j == n_pixels-1:
 		if j == 1:
 			leg = plt.legend([(c0,c1),c2,c3],[c1.get_label(),c2.get_label(),c3.get_label()],
 				handlelength=1.25,fontsize=plt.rcParams['font.size']-2,loc='center left',bbox_to_anchor=(1.025,0.65,0.2,0.2))
 
 
-		ax.set_xlim(-150,450)
+		# ax.set_xlim(-150,450)
+		ax.set_xlim(vel_min,vel_max)
 		if i==0:
 			ax.set_ylim(-0.05,0.3)
 		else:

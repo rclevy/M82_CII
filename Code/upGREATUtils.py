@@ -37,7 +37,7 @@ def load_upgreat_data(filepath):
 def get_bad_edge_chans(pointing_num,pix_num):
 	#velocity clipping for bad edge channels
 	#pixel order 0,1,2,3,4,5,6
-	Vclip_red = np.array([[480.,440.,460.,np.inf,470.,np.inf,440.,],[np.inf,np.inf,np.inf,np.inf,np.inf,np.inf,np.inf]])
+	Vclip_red = np.array([[470.,440.,460.,np.inf,470.,np.inf,440.,],[np.inf,np.inf,np.inf,np.inf,np.inf,np.inf,np.inf]])
 	Vclip_blue = np.array([[-110.,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,],[-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]])
 	return Vclip_red[pointing_num,pix_num], Vclip_blue[pointing_num,pix_num]
 
@@ -66,7 +66,8 @@ def calc_pix_distance_from_gal_center(gal_center, header, distance):
 	dec_pix = header['CRVAL3']*u.deg #deg
 	ra_off = header['CDELT2']*u.deg #deg
 	dec_off = header['CDELT3']*u.deg #deg
-	pix_center = SkyCoord(ra_pix+ra_off,dec_pix+dec_off)
+	pix_sz = (14.1*u.arcsec).to(u.deg)
+	pix_center = SkyCoord(ra_pix+ra_off-pix_sz,dec_pix+dec_off+pix_sz)
 
 	sep_arcsec = gal_center.separation(pix_center).to(u.arcsec)
 	sep_pc = (sep_arcsec.value/206265*distance).to(u.pc)

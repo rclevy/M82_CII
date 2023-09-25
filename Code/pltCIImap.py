@@ -86,7 +86,7 @@ else:
 	if (map_type == 'mom0') or (map_type == 'intinten'):
 		cmap = ListedColormap(sns.cubehelix_palette(start=0.6,rot=-0.65,light=0.95,dark=0.2,n_colors=256,reverse=True))
 	elif (map_type == 'peak') or (map_type == 'epeak') or (map_type == 'max'):
-		cmap = ListedColormap(sns.cubehelix_palette(start=1.1,rot=-0.65,light=0.95,dark=0.2,n_colors=256,reverse=True))
+		cmap = ListedColormap(sns.cubehelix_palette(start=1.1,rot=-0.65,light=0.95,dark=0.3,n_colors=256,reverse=True))
 
 	elif (map_type == 'fwhm') or (map_type == 'efwhm') or (map_type == 'mom2'):
 		cmap = 'viridis'
@@ -224,7 +224,7 @@ elif (map_type == 'max'):
 	# for x in tt:
 	# 	t.insert(0,x)
 	#t = [0.05,0.1,0.25,0.5,1.,2.5,5.]
-	t = [clim[0],0.08,0.2,0.4,0.8,2.,4.,clim[1]]
+	t = [0.08,0.2,0.4,0.8,2.,4.,clim[1]]
 	cb = plt.colorbar(im,extend=cb_ext,shrink=0.7,ticks=t,format='%g')
 else:
 	cb = plt.colorbar(im,extend=cb_ext,shrink=0.7)
@@ -250,8 +250,10 @@ n_pixels = 7
 center = SkyCoord('9h55m52.7250s','+69d40m45.780s')
 sp_offset = (29.152,-80.093) #arcsec
 center_sp = SkyCoord(center.ra+sp_offset[0]*u.arcsec,center.dec+sp_offset[1]*u.arcsec)
+center_str = center_sp.to_string('hmsdms',precision=4).replace(' ','')
+center_str = center_str[0:-2]+'s'
 array_rot = 70. #deg
-fp = Regions.read('../Data/upGREAT_Footprint_Regions/SOFIA_upGREAT_LFA_regions_Cen'+center_sp.to_string('hmsdms').replace(' ','')+'_Rot'+str(array_rot)+'.reg')
+fp = Regions.read('../Data/upGREAT_Footprint_Regions/SOFIA_upGREAT_LFA_regions_Cen'+center_str+'_Rot'+str(array_rot)+'.reg')
 reg_order = [0,5,6,1,2,3,4]
 
 for i in range(n_pixels):
@@ -307,8 +309,13 @@ for i in range(n_pixels):
 	# ax.add_patch(Circle((RA_pix,Dec_pix), bmaj_pix/2, ec='k', fc=spec_col, lw=1.))
 	if np.isnan(spec_val)==False:
 		ax.scatter(RA_pix,Dec_pix,s=MarkerSizeBeamScale(fig,bmaj/2,1/arcsec2pix),c=spec_val,cmap=cmap,norm=norm,edgecolors='k',linewidths=1.)
+		if (map_type == 'max') or (map_type == 'peak'):
+			ax.text(RA_pix,Dec_pix,str(reg_order[i]),color='w',ha='center',va='center',fontsize=plt.rcParams['font.size']+4)
 	else:
 		ax.scatter(RA_pix,Dec_pix,s=MarkerSizeBeamScale(fig,bmaj/2,1/arcsec2pix),c='w',edgecolors='k',linewidths=1.)
+		if (map_type == 'max') or (map_type == 'peak'):
+			ax.text(RA_pix,Dec_pix,str(reg_order[i]),color='k',ha='center',va='center',fontsize=plt.rcParams['font.size']+4)
+	#print(spec_val)
 
 
 new_ymin = ylim[0]-5*bmaj_pix

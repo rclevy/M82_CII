@@ -9,7 +9,7 @@ from makeMomentsfromSpectra import make_moments_from_spectra
 
 fname_hi = '../Data/Ancillary_Data/m82_hi_image_5kms_feathered_pbcor'
 
-hi_cube = SpectralCube.read(fname_hi+'.fits').with_spectral_unit(u.km/u.s)
+hi_cube = SpectralCube.read(fname_hi+'.fits')#.with_spectral_unit(u.km/u.s)
 hi_cube.allow_huge_operations = True
 
 hi_beam_area = np.pi*hi_cube.header['BMAJ']*hi_cube.header['BMIN']*u.deg**2/(4*np.log(2))
@@ -20,7 +20,8 @@ hi_cube_K.write(fname_hi+'_K.fits',overwrite=True)
 
 #mask out the regions with absorption
 #from Martini+2018 Sect 2.3
-hi_mask_lev = 7E19/1.823E18/10*u.K #K 
+#hi_mask_lev = 7E19/1.823E18/10/3*2*u.K #K 
+hi_mask_lev = 2.30*u.K
 print('Masking out I_HI < %.2f K' %hi_mask_lev.value)
 mask = (hi_cube_K > hi_mask_lev)
 hi_cube_masked = hi_cube_K.with_mask(mask)

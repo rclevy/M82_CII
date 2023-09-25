@@ -62,9 +62,10 @@ c = SpectralCube(data=image_conv*u.Jy/u.pixel,wcs=WCS(hdr_conv)).with_spectral_u
 c.allow_huge_operations = True
 
 #only compute the moments over the same velocity range as the [CII] data for consistency
-cii_cube = SpectralCube.read('../Data/Disk_Map/M82_CII_map_cube.fits').with_spectral_unit(u.km/u.s)*u.K
-cii_v_all = cii_cube.spectral_axis.value #km/s
-vmin = -100.*u.km/u.s
+# cii_cube = SpectralCube.read('../Data/Disk_Map/M82_CII_map_cube.fits').with_spectral_unit(u.km/u.s)*u.K
+# cii_v_all = cii_cube.spectral_axis.value #km/s
+cii_v_all = c.spectral_axis.value #km/s
+vmin = -104.*u.km/u.s
 vmax = 400.*u.km/u.s
 idx = np.where((cii_v_all>=vmin.value) & (cii_v_all<=vmax.value))
 cii_v = cii_v_all[idx]
@@ -85,7 +86,8 @@ bkgd = np.zeros((image_conv.shape[1],image_conv.shape[2]))
 intinten = np.zeros((image_conv.shape[1],image_conv.shape[2]))
 mmax = np.zeros((image_conv.shape[1],image_conv.shape[2]))
 mom0 = np.zeros((image_conv.shape[1],image_conv.shape[2]))
-chans =  np.flip(cii_v)
+#chans =  np.flip(cii_v)
+chans = cii_v.copy()
 bounds = [[0.,chans[0],0.,0.],[np.inf,chans[-1],np.inf,np.inf]]
 for i in range(image_conv.shape[1]):
 	for j in range(image_conv.shape[2]):
@@ -102,8 +104,8 @@ for i in range(image_conv.shape[1]):
 			bkgd[i,j]=popt[-1]
 			intinten[i,j] = popt[0]*popt[2]*np.sqrt(np.pi/2)
 		tab = make_moments_from_spectra(chans,this_spec,dv,2.)
-		mom0[i,j] = tab['Mom0'].values[0]
-		mmax[i,j] = tab['Max'].values[0]
+		mom0[i,j] = tab['Mom0'][0]#.values[0]
+		mmax[i,j] = tab['Max'][0]#.values[0]
 
 #now save the peak map
 wcs_peak = WCS(hdr).celestial
@@ -114,7 +116,7 @@ hdul = fits.HDUList([hdu])
 hdul.writeto('../Data/Ancillary_Data/Herschel_PACS_158um_peak_14asGaussPSF_contsub.fits',overwrite=True)
 hdu = fits.PrimaryHDU(data=mmax,header=hdr_peak)
 hdul = fits.HDUList([hdu])
-hdul.writeto('../Data/Ancillary_Data/Herschel_PACS_158um_max_14asGaussPSF_contsub.fits',overwrite=True)
+hdul.writeto('../Data/Ancillary_Data/Herschel_PACS_158um_max_14asGaussPSF.fits',overwrite=True)
 
 
 
@@ -126,7 +128,7 @@ hdul = fits.HDUList([hdu])
 hdul.writeto('../Data/Ancillary_Data/Herschel_PACS_158um_intinten_14asGaussPSF_contsub.fits',overwrite=True)
 hdu = fits.PrimaryHDU(data=mom0,header=hdr_intinten)
 hdul = fits.HDUList([hdu])
-hdul.writeto('../Data/Ancillary_Data/Herschel_PACS_158um_mom0_14asGaussPSF_contsub.fits',overwrite=True)
+hdul.writeto('../Data/Ancillary_Data/Herschel_PACS_158um_mom0_14asGaussPSF.fits',overwrite=True)
 
 
 #save the background subtracted cube

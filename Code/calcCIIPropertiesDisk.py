@@ -44,6 +44,8 @@ M_Cp_tot = np.nansum(M_Cp) #Msun
 eM_Cp_tot = np.sqrt(np.nansum(eM_Cp**2))
 print('The total C+ mass in the disk is %.2e +/- %.2e Msun' %(M_Cp_tot,eM_Cp_tot))
 
+Iint_tot = np.nansum(I_CII)
+
 
 #######################################
 # measure the [CII] rotation velocity #
@@ -55,7 +57,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap,Normalize
 from matplotlib.colorbar import ColorbarBase
 from matplotlib import cm
-from matplotlib.ticker import AutoMinorLocator
+from matplotlib.ticker import AutoMinorLocator,MultipleLocator
 import seaborn as sns
 from scipy.ndimage import rotate
 from spectral_cube import SpectralCube
@@ -87,9 +89,11 @@ def rot_cube_horiz(arr):
 
 cii_color = sns.color_palette('crest',as_cmap=True)(150)
 co_color = '0.66'
-cii_cmap = ListedColormap(sns.cubehelix_palette(start=0.6,rot=-0.65,light=0.9,dark=0.2,n_colors=256,reverse=False))
-co_cmap = ListedColormap(cm.gist_yarg(range(256)))
-co_cmap.set_over('k')
+cii_cmap = ListedColormap(sns.cubehelix_palette(start=0.6,rot=-0.65,light=1.0,dark=0.2,n_colors=256,reverse=False))
+#co_cmap = ListedColormap(cm.gist_yarg(range(256)))
+#co_cmap.set_over('k')
+co_cmap = ListedColormap(sns.cubehelix_palette(start=0.6,rot=-0.65,light=0.9,dark=0.0,hue=0,n_colors=256,reverse=False))
+
 
 #open the masked CII integrated intensity map
 I_CII = fits.open('../Data/Disk_Map/Moments/M82_CII_map_mom0_matchedCIICO.fits')[0].data
@@ -147,63 +151,78 @@ I_CO_rot[I_CO_rot>800]=800
 Vmax_CO = 85.
 
 
-#make a position-velocity diagram
-fig=plt.figure(1)
-plt.clf()
-for i in range(V_CO_rot.shape[0]):
-	plt.scatter(xax_off_kpc_CO,V_CO_rot[i,:]-Vsys_CO,s=20,marker='o',
-		alpha=0.75,c=I_CO_rot[i,:],cmap=co_cmap,zorder=3)
-plt.axhline(Vmax_CO,color=co_color,lw=1.5)
-plt.axhline(-Vmax_CO,color=co_color,lw=1.5)
-for i in range(V_CII.shape[0]):
-	plt.scatter(xax_off_kpc,V_CII_rot[i,:]-Vsys_CII,s=MarkerSizePixelScale(fig,arcsec2pix*1.2,d),marker='_',
-		alpha=0.75,lw=8,c=I_CII_rot[i,:],cmap=cii_cmap,zorder=2)
-plt.axhline(Vmax_CII,color=cii_color,lw=1.5,linestyle='--')
-plt.axhline(-Vmax_CII,color=cii_color,lw=1.5,linestyle='--')
-# plt.axhline(0,color='gray',zorder=1,alpha=0.5,lw=0.75)
-# plt.axvline(0,color='gray',zorder=1,alpha=0.5,lw=0.75)
-plt.grid(which='major',axis='both',alpha=0.2)
-plt.xlabel('Offset from Center along Major Axis (kpc)')
-plt.ylabel('Velocity (km s$^{-1})$')
-plt.minorticks_on()
-plt.xlim(-1.5,1.5)
-plt.ylim(-120,120)
-#make colorbars for the CII and CO data
-I_CII_rot[0,0]=0.
-I_CO_rot[0,0]=0.
-ax_cii = fig.add_axes([0.92,0.125,0.025,0.75])
-norm_cii = Normalize(vmin=0,vmax=800)
-cb_cii = ColorbarBase(ax_cii,cmap=cii_cmap,norm=norm_cii,
-	orientation='vertical')
-cb_cii.ax.tick_params(labelsize=10)
-cb_cii.set_label('Integrated Intensity (K km s$^{-1}$)',fontsize=10)
-levels = np.arange(0,850,100)
-for i in range(len(levels)):
-	this_col = co_cmap(int(256/len(levels)*i))
-	cb_cii.ax.hlines(levels[i],0,levels[-1],colors=this_col,linewidth=2)
-plt.savefig('../Plots/Center_Maps/M82_CII_CO_PVdiagram_RCLversion.pdf',bbox_inches='tight',metadata={'Creator':this_script})
+# #make a position-velocity diagram
+# fig=plt.figure(1)
+# plt.clf()
+# for i in range(V_CO_rot.shape[0]):
+# 	plt.scatter(xax_off_kpc_CO,V_CO_rot[i,:]-Vsys_CO,s=20,marker='o',
+# 		alpha=0.75,c=I_CO_rot[i,:],cmap=co_cmap,zorder=3)
+# plt.axhline(Vmax_CO,color=co_color,lw=1.5)
+# plt.axhline(-Vmax_CO,color=co_color,lw=1.5)
+# for i in range(V_CII.shape[0]):
+# 	plt.scatter(xax_off_kpc,V_CII_rot[i,:]-Vsys_CII,s=MarkerSizePixelScale(fig,arcsec2pix*1.2,d),marker='_',
+# 		alpha=0.75,lw=8,c=I_CII_rot[i,:],cmap=cii_cmap,zorder=2)
+# plt.axhline(Vmax_CII,color=cii_color,lw=1.5,linestyle='--')
+# plt.axhline(-Vmax_CII,color=cii_color,lw=1.5,linestyle='--')
+# # plt.axhline(0,color='gray',zorder=1,alpha=0.5,lw=0.75)
+# # plt.axvline(0,color='gray',zorder=1,alpha=0.5,lw=0.75)
+# plt.grid(which='major',axis='both',alpha=0.2)
+# plt.xlabel('Offset from Center along Major Axis (kpc)')
+# plt.ylabel('Velocity (km s$^{-1})$')
+# plt.minorticks_on()
+# plt.xlim(-1.5,1.5)
+# plt.ylim(-120,120)
+# #make colorbars for the CII and CO data
+# I_CII_rot[0,0]=0.
+# I_CO_rot[0,0]=0.
+# ax_cii = fig.add_axes([0.92,0.125,0.025,0.75])
+# norm_cii = Normalize(vmin=0,vmax=800)
+# cb_cii = ColorbarBase(ax_cii,cmap=cii_cmap,norm=norm_cii,
+# 	orientation='vertical')
+# cb_cii.ax.tick_params(labelsize=10)
+# cb_cii.set_label('Integrated Intensity (K km s$^{-1}$)',fontsize=10)
+# levels = np.arange(0,850,100)
+# for i in range(len(levels)):
+# 	this_col = co_cmap(int(256/len(levels)*i))
+# 	cb_cii.ax.hlines(levels[i],0,levels[-1],colors=this_col,linewidth=2)
+# plt.savefig('../Plots/Center_Maps/M82_CII_CO_PVdiagram_RCLversion.pdf',bbox_inches='tight',metadata={'Creator':this_script})
 
 
 #make a more traditional PV diagram
 cii_cube = fits.open('../Data/Disk_Map/M82_CII_map_fullysampled_matchedCIICO.fits')
 hdr = cii_cube[0].header
 cii_cube = cii_cube[0].data
+levels_cii = np.arange(0.25,3.5,0.25)
+cii_cmap = ListedColormap(cm.Spectral_r(range(256)))
+cii_cmap.set_under('w')
 co_cube = fits.open('../Data/Ancillary_Data/M82.CO.30m.IRAM_reprocessed_matchedCIICO.fits')[0].data
 #rotate the cube so the major axis is horizontal
 cii_cube_rot = rot_cube_horiz(cii_cube.copy())
 co_cube_rot = rot_cube_horiz(co_cube.copy())
+#mask out noisy pixels
+cii_rms = 0.09 #K
+co_rms = 0.03 #K
+cii_cube_rot[cii_cube_rot<cii_rms]=np.nan
+co_cube_rot[co_cube_rot<co_rms]=np.nan
 #collapse the cubes along the y-axis weighting by the intensity
-cii_cube_rot[np.isnan(cii_cube_rot)==True]=0.
+cii_cube_rot[np.isnan(cii_cube_rot)==True]=1E-9
 cii_pv = np.average(cii_cube_rot,axis=1,weights=cii_cube_rot)
-co_cube_rot[np.isnan(co_cube_rot)==True]=0.
+co_cube_rot[np.isnan(co_cube_rot)==True]=1E-9
 co_pv = np.average(co_cube_rot,axis=1,weights=co_cube_rot)
-levels = np.arange(0.25,3.5,0.5)
+
+# cii_pv = np.roll(cii_pv,1,axis=1)
+# co_pv = np.roll(co_pv,1,axis=1)
+
+co_cmap = 'Greys_r'
+levels_co = np.arange(0.25,3.25,0.5)
 #now plot
+plt.close('all')
 fig=plt.figure(1)
 plt.clf()
-im = plt.imshow(cii_pv,cmap=cii_cmap,vmin=0,vmax=3.5,aspect='auto')
+#im = plt.imshow(cii_pv,cmap=cii_cmap,vmin=0,vmax=3.5,aspect='auto')
+im = plt.contourf(cii_pv,cmap=cii_cmap,levels=levels_cii,extend='both')
 ax = plt.gca()
-con = ax.contour(co_pv,levels=levels,cmap=co_cmap,extend='both')
+con = ax.contour(co_pv,levels=levels_co,cmap=co_cmap,extend='both',linewidths=2)
 #relabel axes
 x = xax_off_kpc.copy()
 xl_kpc = 1.5
@@ -225,14 +244,13 @@ ymin = np.argmin(np.abs(-yl_kms-y))
 yt = np.linspace(ymin,ymax,9)
 ytl = np.linspace(-yl_kms,yl_kms,9).astype(int)
 ax.set_yticks(yt)
+ax.yaxis.set_minor_locator(MultipleLocator(1))
 ax.set_yticklabels(ytl)
-ax.yaxis.set_minor_locator(AutoMinorLocator(6))
-# yl_kms = 120.
-# ymax = np.argmin(np.abs(y-yl_kms))
-# ymin = np.argmin(np.abs(-yl_kms-y))
 plt.ylim(ymin,ymax)
 ax.set_ylabel('Velocity (km s$^{-1}$)')
 plt.grid(which='major',axis='both',alpha=0.2)
+# plt.axhline((ymin+ymax)/2,color='dimgrey',lw=0.75,alpha=0.5)
+# plt.axvline((xmin+xmax)/2,color='dimgrey',lw=0.75,alpha=0.5)
 #add colorbar
 cb = plt.colorbar(im)
 #cb.ax.tick_params(labelsize=10)

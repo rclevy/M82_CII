@@ -55,7 +55,7 @@ cbreak=0.0998 #default ds9 scaling
 #norm=ImageNormalize(co,stretch=LogStretch(),interval=ManualInterval(vmax=vmax,vmin=vmin))
 norm_co=ImageNormalize(co,stretch=AsinhStretch(cbreak),interval=ManualInterval(vmax=vmax_co,vmin=vmin_co))
 cmap_co = cm.get_cmap('gist_yarg')
-levels_co = np.logspace(np.log10(0.12),np.log10(vmax_co),10)
+#levels_co = np.logspace(np.log10(0.12),np.log10(vmax_co),10)
 arcsec2pix = hdr_co['CDELT2']*3600
 
 
@@ -79,12 +79,14 @@ bmin_cii = hdr_cii['BMIN']*3600 #arcsec
 bpa_cii = hdr_cii['BPA'] #deg
 outline_color_cii = cmap_cii(150)
 
+levels_co = np.insert(levels_cii,0,[0,25,50,75])
+
 #now open the [CII] and CO data cubes to extract the spectra
 #open CII cube
 cii_cube = fits.open('../Data/Disk_Map/M82_CII_map_fullysampled_matchedCIICO.fits')
 cii_cube_wcs = WCS(cii_cube[0].header)
 cii_cube = cii_cube[0].data
-cii_vel_axis = SpectralCube.read('../Data/Disk_Map/M82_CII_map_fullysampled_matchedCIICO.fits').with_spectral_unit(u.km/u.s).spectral_axis.value
+cii_vel_axis = SpectralCube.read('../Data/Disk_Map/M82_CII_map_fullysampled_matchedCIICO.fits').spectral_axis.value
 
 #open CO cube
 fname_co_tp = '../Data/Ancillary_Data/M82.CO.30m.IRAM_reprocessed_matchedCIICO.fits'
@@ -92,7 +94,7 @@ co_tp_cube = fits.open(fname_co_tp)
 co_tp_cube_hdr = co_tp_cube[0].header
 co_tp_cube = co_tp_cube[0].data
 co_tp_wcs = WCS(co_tp_cube_hdr)
-co_tp_vel_axis = SpectralCube.read(fname_co_tp).with_spectral_unit(u.km/u.s).spectral_axis.value
+co_tp_vel_axis = SpectralCube.read(fname_co_tp).spectral_axis.value
 
 
 #set the RA and Dec from which to extract spectra
@@ -168,7 +170,8 @@ co_color = '0.33'
 fig = plt.figure(1,figsize=(14,10))
 plt.clf()
 ax = plt.subplot(projection=wcs_co)
-im=ax.imshow(co,origin='lower',cmap=cmap_co,norm=norm_co)
+#im=ax.imshow(co,origin='lower',cmap=cmap_co,norm=norm_co)
+im=ax.contourf(co,origin='lower',levels=levels_co,cmap=cmap_co,extend='max')
 cb=plt.colorbar(im)
 cb.set_label('I$_{\mathrm{int}}$ (K km s$^{-1}$)')
 #ax.contourf(co,levels=levels_co,origin='lower',cmap=cmap_co,alpha=1.,extend='max')
@@ -204,8 +207,8 @@ ax.set_aspect('equal')
 fsz=18
 for i in range(len(pos)):
 	f2 = fig.add_axes([pxoff[i],pyoff[i],0.2,0.2])
-	f2.step(co_tp_vel_axis,spec_co[i],color=co_color,linewidth=2)
-	f2.step(cii_vel_axis,spec_cii[i],color=cii_color,linewidth=2)
+	l1=f2.step(co_tp_vel_axis,spec_co[i],color=co_color,linewidth=2,label='CO')
+	l2=f2.step(cii_vel_axis,spec_cii[i],color=cii_color,linewidth=2,label='[CII]')
 	f2.axvline(210,color='k',lw=0.75)
 	f2.set_xlim(-150,450)
 	#f2.set_ylim(-2,45)
@@ -224,6 +227,11 @@ for i in range(len(pos)):
 	# 			arrowprops=dict(arrowstyle='-|>',fc='k',ec='k',lw=2.0),
 	# 			color='k',fontsize=fsz,zorder=8)
 
+	if i==0:
+		f2.text(0.98, 0.95, '[CII]', color=cii_color,transform=f2.transAxes,ha='right',va='top',fontsize=fsz-4,
+				path_effects=[pe.Stroke(linewidth=0.5, foreground=cii_color),pe.Normal()])
+		f2.text(0.98, 0.85, 'CO', color=co_color,transform=f2.transAxes,ha='right',va='top',fontsize=fsz-4,
+				path_effects=[pe.Stroke(linewidth=0.5, foreground=co_color),pe.Normal()])
 
 
 plt.savefig('../Plots/Composite_Maps/M82_CO_CII_spectra.pdf',dpi=300,metadata={'Creator':this_script})

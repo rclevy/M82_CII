@@ -52,12 +52,16 @@ cii_conv_reproj.write('../Data/Disk_Map/M82_CII_map_fullysampled_matchedCIICO.fi
 co_specsmooth_reproj.write('../Data/Ancillary_Data/M82.CO.30m.IRAM_reprocessed_matchedCIICO.fits',overwrite=True)
 
 #make mom0 maps
+max_cii = cii_conv_reproj.max(axis=0)
+max_co = co_specsmooth_reproj.max(axis=0)
 mom0_cii = cii_conv_reproj.moment(order=0)
 mom0_co = co_specsmooth_reproj.moment(order=0)
 mom1_cii = cii_conv_reproj.moment(order=1)
 mom1_co = co_specsmooth_reproj.moment(order=1)
 
 #write to file
+max_cii.write('../Data/Disk_Map/Moments/M82_CII_map_max_matchedCIICO.fits',overwrite=True)
+max_co.write('../Data/Ancillary_Data/M82.CO.30m.IRAM_reprocessed_max_matchedCIICO.fits',overwrite=True)
 mom0_cii.write('../Data/Disk_Map/Moments/M82_CII_map_mom0_matchedCIICO.fits',overwrite=True)
 mom0_co.write('../Data/Ancillary_Data/M82.CO.30m.IRAM_reprocessed_mom0_matchedCIICO.fits',overwrite=True)
 mom1_cii.write('../Data/Disk_Map/Moments/M82_CII_map_mom1_matchedCIICO.fits',overwrite=True)
